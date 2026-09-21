@@ -238,6 +238,43 @@ Tabs.MainTab:Toggle({
 
 
 
+-- ==================== UI LIBRARY TOGGLE ====================
+local isEnabled = false
+
+Tabs.MainTab:Toggle({
+	Title = "Instant Prompt",
+	Desc = "Make the Prompt Becomes One Tap",
+	Value = false,
+	Callback = function(state)
+		isEnabled = state
+		
+		-- Function para baguhin ang hold duration ng mga prompt
+		local function updatePrompts()
+			for _, descendant in ipairs(workspace:GetDescendants()) do
+				if descendant:IsA("ProximityPrompt") then
+					if isEnabled then
+						-- Ginagawa itong 0 para ma-tap agad nang walang hintayan
+						descendant.HoldDuration = 0
+					else
+						-- Pwede mong ibalik sa default (halimbawa ay 0.5 o kung ano man ang orig)
+						-- O kaya ay hayaan na lang kung may sarili silang duration
+					end
+				end
+			end
+		end
+
+		updatePrompts()
+		
+		-- Opsyonal: Para ma-detect din ang mga bagong mag-a-appear na prompt sa laro
+		if isEnabled then
+			workspace.DescendantAdded:Connect(function(descendant)
+				if isEnabled and descendant:IsA("ProximityPrompt") then
+					descendant.HoldDuration = 0
+				end
+			end)
+		end
+	end,
+})
 
 
 
