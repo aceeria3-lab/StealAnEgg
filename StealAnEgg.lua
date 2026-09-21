@@ -526,6 +526,25 @@ Tabs.PlayerTab:Toggle({
 
 
 
+-- Settings Section --
 
+local Tabs = {
+	SettingTab = Window:Tab({
+		Title = "Setting",
+		Icon = "bird",
+	}),
+}
+
+local Keybind = Tabs.SettingTab:Keybind({
+    Title = "UI Keybind",
+    Desc = "Keybind to open ui",
+    Value = "Z", -- Pinalitaning Z ang default key[span_1](start_span)[span_1](end_span)
+    Callback = function(v)
+        Window:SetToggleKey(Enum.KeyCode[v])[span_2](start_span)[span_2](end_span)
+    end,
+})
+
+-- I-lock ito para hindi na mabago ng user
+Keybind:Lock()
 
 
