@@ -86,15 +86,6 @@ local Window = WindUI:CreateWindow({
 
 
 
--- */  Tags  /* --
-do
-	Window:Tag({
-		Title = "v" .. WindUI.Version,
-		Icon = "github",
-		Color = Color3.fromHex("#1c1c1c"),
-		Border = true,
-	})
-end
 
 -- */  Colors  /* --
 local Purple = Color3.fromHex("#7775F2")
