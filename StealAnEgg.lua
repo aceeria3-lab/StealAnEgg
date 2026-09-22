@@ -102,7 +102,7 @@ local Red = Color3.fromHex("#EF4F1D")
 local Tabs = {
 	MainTab = Window:Tab({
 		Title = "Main",
-		Icon = "bird",
+		Icon = "align-vertical-distribute-center",
 	}),
 }
 
@@ -290,7 +290,7 @@ end)
 local Tabs = {
 	AutomaticallyTab = Window:Tab({
 		Title = "Automatically",
-		Icon = "bird",
+		Icon = "workflow",
 	}),
 }
 
@@ -379,7 +379,7 @@ Tabs.AutomaticallyTab:Toggle({
 local Tabs = {
 	MiscTab = Window:Tab({
 		Title = "Soon",
-		Icon = "bird",
+		Icon = "eye",
 	}),
 }
 
@@ -399,7 +399,7 @@ Tabs.MiscTab:Toggle({
 local Tabs = {
 	ShopTab = Window:Tab({
 		Title = "Soon",
-		Icon = "bird",
+		Icon = "shopping-cart",
 	}),
 }
 
@@ -420,7 +420,7 @@ Tabs.ShopTab:Toggle({
 local Tabs = {
 	PlayerTab = Window:Tab({
 		Title = "Player",
-		Icon = "bird",
+		Icon = "user-round-cog",
 	}),
 }
 
@@ -567,6 +567,61 @@ Tabs.PlayerTab:Toggle({
 })
 
 
+-- ====================================================================
+-- NOCLIP TOGGLE (PLAYER TAB)
+-- ====================================================================
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local noclipConnection = nil
+
+Tabs.PlayerTab:Toggle({
+    Title = "Noclip",
+    Desc = "Walk through walls and obstacles",
+    Value = false,
+    Callback = function(state)
+        if state then
+            -- ===== [TOGGLE ON] =====
+            if noclipConnection then
+                noclipConnection:Disconnect()
+            end
+
+            noclipConnection = RunService.Stepped:Connect(function()
+                local character = player.Character
+                if character then
+                    for _, part in ipairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            -- ===== [TOGGLE OFF] =====
+            if noclipConnection then
+                noclipConnection:Disconnect()
+                noclipConnection = nil
+            end
+
+            local character = player.Character
+            if character then
+                for _, part in ipairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end,
+})
+
+
+
+
+
+
+
 
 
 -- Settings Section --
@@ -574,7 +629,7 @@ Tabs.PlayerTab:Toggle({
 local Tabs = {
 	SettingTab = Window:Tab({
 		Title = "Setting",
-		Icon = "bird",
+		Icon = "cog",
 	}),
 }
 
@@ -589,5 +644,195 @@ local Keybind = Tabs.SettingTab:Keybind({
 
 -- I-lock ito para hindi na mabago ng user
 Keybind:Lock()
+
+
+-- ====================================================================
+-- DAYTIME / MORNING TOGGLE (SETTING TAB)
+-- ====================================================================
+local Lighting = game:GetService("Lighting")
+
+Tabs.SettingTab:Toggle({
+    Title = "DayTime/Morning",
+    Desc = "Leave to the Darkness",
+    Value = false,
+    Callback = function(state)
+        pcall(function()
+            if state then
+                -- ===== [TOGGLE ON: Gawing Tanghali] =====
+                Lighting.ClockTime = 14
+                Lighting.Brightness = 3
+                Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+                Lighting.Ambient = Color3.fromRGB(150, 150, 150)
+                Lighting.GlobalShadows = false
+                
+                for _, child in ipairs(Lighting:GetChildren()) do
+                    if child:IsA("Atmosphere") then
+                        child.Density = 0
+                        child.Haze = 0
+                        child.Color = Color3.fromRGB(255, 255, 255)
+                        child.Decay = Color3.fromRGB(255, 255, 255)
+                    elseif child:IsA("ColorCorrectionEffect") then
+                        child.TintColor = Color3.fromRGB(255, 255, 255)
+                        child.Saturation = 0.1
+                        child.Contrast = 0.1
+                    elseif child:IsA("Sky") then
+                        child.StarCount = 0
+                    end
+                end
+            else
+                -- ===== [TOGGLE OFF: Ibalik sa Normal/Gabi] =====
+                Lighting.ClockTime = 0
+                Lighting.Brightness = 1
+                Lighting.OutdoorAmbient = Color3.fromRGB(70, 70, 70)
+                Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+                Lighting.GlobalShadows = true
+                
+                for _, child in ipairs(Lighting:GetChildren()) do
+                    if child:IsA("Atmosphere") then
+                        child.Density = 0.35 -- O i-adjust ayon sa default ng laro
+                        child.Haze = 0
+                        child.Color = Color3.fromRGB(199, 199, 199)
+                        child.Decay = Color3.fromRGB(106, 112, 125)
+                    elseif child:IsA("ColorCorrectionEffect") then
+                        child.TintColor = Color3.fromRGB(255, 255, 255)
+                        child.Saturation = 0
+                        child.Contrast = 0
+                    elseif child:IsA("Sky") then
+                        child.StarCount = 3000
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+
+-- ====================================================================
+-- ANTI-LAG / LOW GRAPHICS TOGGLE (WINDUI VERSION)
+-- ====================================================================
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
+
+local antilagConnection = nil
+local originalSettings = {}
+
+local function notify(title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title;
+            Text = text;
+            Duration = duration or 2;
+        })
+    end)
+end
+
+Tabs.SettingTab:Toggle({
+    Title = "Anti-Lag / Low Graphics",
+    Desc = "Boosts FPS by disabling shadows, particles, and heavy textures",
+    Value = false,
+    Callback = function(state)
+        if state then
+            -- ===== [TOGGLE ON] =====
+            
+
+            local Terrain = Workspace:FindFirstChildWhichIsA("Terrain")
+            if Terrain then
+                originalSettings.WaterWaveSize = Terrain.WaterWaveSize
+                originalSettings.WaterWaveSpeed = Terrain.WaterWaveSpeed
+                originalSettings.WaterReflectance = Terrain.WaterReflectance
+                originalSettings.WaterTransparency = Terrain.WaterTransparency
+                Terrain.WaterWaveSize = 0
+                Terrain.WaterWaveSpeed = 0
+                Terrain.WaterReflectance = 0
+                Terrain.WaterTransparency = 1
+            end
+
+            originalSettings.GlobalShadows = Lighting.GlobalShadows
+            originalSettings.FogEnd = Lighting.FogEnd
+            originalSettings.FogStart = Lighting.FogStart
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9e9
+            Lighting.FogStart = 9e9
+
+            for _, v in pairs(game:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    originalSettings[v] = {CastShadow = v.CastShadow, Material = v.Material, Reflectance = v.Reflectance}
+                    v.CastShadow = false
+                    v.Material = Enum.Material.Plastic
+                    v.Reflectance = 0
+                elseif v:IsA("Decal") then
+                    if originalSettings[v] == nil then originalSettings[v] = v.Transparency end
+                    v.Transparency = 1
+                elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                    if originalSettings[v] == nil then originalSettings[v] = v.Lifetime end
+                    v.Lifetime = NumberRange.new(0)
+                end
+            end
+
+            for _, v in pairs(Lighting:GetDescendants()) do
+                if v:IsA("PostEffect") then
+                    originalSettings[v] = v.Enabled
+                    v.Enabled = false
+                end
+            end
+
+            antilagConnection = Workspace.DescendantAdded:Connect(function(child)
+                task.spawn(function()
+                    if child:IsA("ForceField") or child:IsA("Sparkles") or child:IsA("Smoke") or child:IsA("Fire") or child:IsA("Beam") then
+                        RunService.Heartbeat:Wait()
+                        child:Destroy()
+                    elseif child:IsA("BasePart") then
+                        child.CastShadow = false
+                    end
+                end)
+            end)
+
+            
+        else
+            -- ===== [TOGGLE OFF] =====
+            if antilagConnection then
+                antilagConnection:Disconnect()
+                antilagConnection = nil
+            end
+
+            local Terrain = Workspace:FindFirstChildWhichIsA("Terrain")
+            if Terrain and originalSettings.WaterTransparency then
+                Terrain.WaterWaveSize = originalSettings.WaterWaveSize
+                Terrain.WaterWaveSpeed = originalSettings.WaterWaveSpeed
+                Terrain.WaterReflectance = originalSettings.WaterReflectance
+                Terrain.WaterTransparency = originalSettings.WaterTransparency
+            end
+
+            Lighting.GlobalShadows = originalSettings.GlobalShadows ~= nil and originalSettings.GlobalShadows or true
+            Lighting.FogEnd = originalSettings.FogEnd ~= nil and originalSettings.FogEnd or 100000
+            Lighting.FogStart = originalSettings.FogStart ~= nil and originalSettings.FogStart or 0
+
+            for _, v in pairs(game:GetDescendants()) do
+                if originalSettings[v] then
+                    if v:IsA("BasePart") then
+                        v.CastShadow = originalSettings[v].CastShadow
+                        v.Material = originalSettings[v].Material
+                        v.Reflectance = originalSettings[v].Reflectance
+                    elseif v:IsA("Decal") then
+                        v.Transparency = originalSettings[v]
+                    elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                        v.Lifetime = originalSettings[v]
+                    end
+                end
+            end
+
+            for _, v in pairs(Lighting:GetDescendants()) do
+                if originalSettings[v] ~= nil and v:IsA("PostEffect") then
+                    v.Enabled = originalSettings[v]
+                end
+            end
+
+            originalSettings = {}
+            
+        end
+    end,
+})
 
 
