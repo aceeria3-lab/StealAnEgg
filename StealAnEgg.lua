@@ -26,30 +26,7 @@ do
 end
 
 
-function createPopup()
-	return WindUI:Popup({
-		Title = "Welcome to the WindUI!",
-		Icon = "bird",
-		Content = "Hello!",
-		Buttons = {
-			{
-				Title = "Hahaha",
-				Icon = "bird",
-				Variant = "Tertiary",
-			},
-			{
-				Title = "Hahaha",
-				Icon = "bird",
-				Variant = "Tertiary",
-			},
-			{
-				Title = "Hahaha",
-				Icon = "bird",
-				Variant = "Tertiary",
-			},
-		},
-	})
-end
+
 
 -- */  Window  /* --
 local Window = WindUI:CreateWindow({
@@ -85,7 +62,7 @@ local Window = WindUI:CreateWindow({
 })
 
 
-createPopup()
+
 
 -- */  Colors  /* --
 local Purple = Color3.fromHex("#7775F2")
