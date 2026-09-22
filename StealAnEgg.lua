@@ -85,7 +85,7 @@ local Window = WindUI:CreateWindow({
 })
 
 
-
+createPopup()
 
 -- */  Colors  /* --
 local Purple = Color3.fromHex("#7775F2")
