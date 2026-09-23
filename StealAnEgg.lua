@@ -432,8 +432,8 @@ end
 
 -- UI Toggle para sa Anti-Ragdoll (Nasa labas na at handa na para sa Tab mo)
 Tabs.SettingTab:Toggle({
-    Title = "Anti Ragdoll + Knockback Fix",
-    Desc = "Prevents ragdoll states and suppresses excessive knockback",
+    Title = "Anti Ragdoll & KnockBack",
+    Desc = "Prevents ragdoll and knockback",
     Value = false,
     Callback = function(state)
         if state then
