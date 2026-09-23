@@ -431,7 +431,7 @@ if localPlayer.Character then
 end
 
 -- UI Toggle para sa Anti-Ragdoll (Nasa labas na at handa na para sa Tab mo)
-Tabs.SettingTab:Toggle({
+Tabs.MainTab:Toggle({
     Title = "Anti Ragdoll & KnockBack",
     Desc = "Prevents ragdoll and knockback",
     Value = false,
