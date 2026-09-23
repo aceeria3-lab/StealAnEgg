@@ -502,45 +502,6 @@ Tabs.AutomaticallyTab:Toggle({
 })
 
 
--- ====================================================================
--- ANTI TRAP TOGGLE
--- ====================================================================
-local Workspace = game:GetService("Workspace")
-
-local isAntiTrapActive = false
-local antiTrapConnection = nil
-
-Tabs.AutomaticallyTab:Toggle({
-    Title = "Anti Trap",
-    Desc = "Automatically Remove the Trap",
-    Value = false,
-    Callback = function(state)
-        isAntiTrapActive = state
-        
-        if state then
-            -- ===== [TOGGLE ON] =====
-            antiTrapConnection = task.spawn(function()
-                while isAntiTrapActive do
-                    pcall(function()
-                        local debrisFolder = Workspace:FindFirstChild("__DEBRIS")
-                        if debrisFolder then
-                            debrisFolder:Destroy()
-                        end
-                    end)
-                    -- Maghintay ng kaunting segundo bago mag-scan ulit para maiwasan ang lag
-                    task.wait(0.5) 
-                end
-            end)
-        else
-            -- ===== [TOGGLE OFF] =====
-            isAntiTrapActive = false
-            if antiTrapConnection then
-                task.cancel(antiTrapConnection)
-                antiTrapConnection = nil
-            end
-        end
-    end,
-})
 
 
 -- ====================================================================
@@ -553,7 +514,7 @@ local antiTrapConnection = nil
 
 Tabs.AutomaticallyTab:Toggle({
     Title = "Anti Trap",
-    Desc = "Automatically Remove Traps and Transient Folders",
+    Desc = "Automatically Remove Traps",
     Value = false,
     Callback = function(state)
         isAntiTrapActive = state
