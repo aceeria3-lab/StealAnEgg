@@ -246,6 +246,208 @@ Tabs.MainTab:Toggle({
 
 
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local localPlayer = Players.LocalPlayer
+
+-- ANTI-RAGDOLL SYSTEM (Nasa labas na, walang 'do' at 'end')
+local antiRagdollConnections = {}
+local antiRagdollCharacter, antiRagdollHumanoid, antiRagdollRootPart, antiRagdollAnimator
+local lastVelocity = Vector3.new(0, 0, 0)
+local velocityChangeThreshold = 40
+local velocityMagnitudeThreshold = 25
+local maxVelocity = 15
+
+local function isFlyingCarpetActive()
+    if not antiRagdollCharacter then return false end
+    local tool = antiRagdollCharacter:FindFirstChildWhichIsA("Tool")
+    if not tool then return false end
+    local hrp = antiRagdollCharacter:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        for _, obj in ipairs(hrp:GetChildren()) do
+            if obj:IsA("BodyVelocity") or obj:IsA("BodyPosition") or obj:IsA("BodyGyro") then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function isRagdolled()
+    if not antiRagdollHumanoid then return false end
+    local state = antiRagdollHumanoid:GetState()
+    return state == Enum.HumanoidStateType.Physics
+        or state == Enum.HumanoidStateType.Ragdoll
+        or state == Enum.HumanoidStateType.FallingDown
+        or state == Enum.HumanoidStateType.GettingUp
+end
+
+local function enableAntiRagdollControls()
+    pcall(function()
+        local PlayerModule = localPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule", 10)
+        require(PlayerModule):GetControls():Enable()
+    end)
+end
+
+local function cleanupRagdoll()
+    if not antiRagdollCharacter then return end
+    local carpetEquipped = isFlyingCarpetActive()
+
+    local function processChildren(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if obj:IsA("BallSocketConstraint") or obj:IsA("NoCollisionConstraint") or obj:IsA("HingeConstraint")
+                or (obj:IsA("Attachment") and (obj.Name == "A" or obj.Name == "B")) then
+                obj:Destroy()
+            elseif obj:IsA("BodyVelocity") or obj:IsA("BodyPosition") or obj:IsA("BodyGyro") then
+                if not carpetEquipped then obj:Destroy() end
+            elseif obj:IsA("Motor6D") then
+                obj.Enabled = true
+            elseif obj:IsA("BasePart") then
+                for _, child in ipairs(obj:GetChildren()) do
+                    if child:IsA("BallSocketConstraint") or child:IsA("NoCollisionConstraint") or child:IsA("HingeConstraint") or child:IsA("Motor6D") then
+                        if child:IsA("Motor6D") then
+                            child.Enabled = true
+                        else
+                            child:Destroy()
+                        end
+                    elseif child:IsA("Attachment") and (child.Name == "A" or child.Name == "B") then
+                        child:Destroy()
+                    end
+                end
+            end
+        end
+    end
+
+    pcall(function() processChildren(antiRagdollCharacter) end)
+
+    if antiRagdollAnimator then
+        for _, track in pairs(antiRagdollAnimator:GetPlayingAnimationTracks()) do
+            local animName = track.Animation and track.Animation.Name:lower() or ""
+            if animName:find("rag") or animName:find("fall") or animName:find("hurt") or animName:find("down") then
+                track:Stop(0)
+            end
+        end
+    end
+end
+
+local function setupAntiRagdollCharacter(char)
+    antiRagdollCharacter = char
+    antiRagdollHumanoid = char:WaitForChild("Humanoid", 10)
+    antiRagdollRootPart = char:WaitForChild("HumanoidRootPart", 10)
+    antiRagdollAnimator = antiRagdollHumanoid and antiRagdollHumanoid:WaitForChild("Animator", 10)
+    lastVelocity = Vector3.new(0, 0, 0)
+end
+
+local function clearAntiRagdollConnections()
+    for _, c in pairs(antiRagdollConnections) do
+        pcall(function() c:Disconnect() end)
+    end
+    antiRagdollConnections = {}
+end
+
+local function setupAntiRagdollConnections()
+    clearAntiRagdollConnections()
+    if not antiRagdollHumanoid or not antiRagdollRootPart then return end
+
+    table.insert(antiRagdollConnections, antiRagdollHumanoid.StateChanged:Connect(function()
+        if (_G.AntiRagdollEnabled or _G.antiKnockbackEnabled) and isRagdolled() then
+            if not isFlyingCarpetActive() then
+                antiRagdollHumanoid:ChangeState(Enum.HumanoidStateType.Running)
+            end
+            cleanupRagdoll()
+            workspace.CurrentCamera.CameraSubject = antiRagdollHumanoid
+            enableAntiRagdollControls()
+        end
+    end))
+
+    pcall(function()
+        local impulsePath = ReplicatedStorage:FindFirstChild("Packages")
+        if impulsePath then
+            impulsePath = impulsePath:FindFirstChild("Net")
+            if impulsePath then
+                impulsePath = impulsePath:FindFirstChild("RE/CombatService/ApplyImpulse")
+                if impulsePath then
+                    table.insert(antiRagdollConnections, impulsePath.OnClientEvent:Connect(function()
+                        if (_G.AntiRagdollEnabled or _G.antiKnockbackEnabled) and isRagdolled() then
+                            antiRagdollRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        end
+                    end))
+                end
+            end
+        end
+    end)
+
+    table.insert(antiRagdollConnections, antiRagdollCharacter.DescendantAdded:Connect(function()
+        if (_G.AntiRagdollEnabled or _G.antiKnockbackEnabled) and isRagdolled() then
+            cleanupRagdoll()
+        end
+    end))
+
+    table.insert(antiRagdollConnections, RunService.Heartbeat:Connect(function()
+        if (_G.AntiRagdollEnabled or _G.antiKnockbackEnabled) and isRagdolled() then
+            cleanupRagdoll()
+            local velocity = antiRagdollRootPart.AssemblyLinearVelocity
+            if (velocity - lastVelocity).Magnitude > velocityChangeThreshold
+                and velocity.Magnitude > velocityMagnitudeThreshold then
+                antiRagdollRootPart.AssemblyLinearVelocity = velocity.Unit * math.min(velocity.Magnitude, maxVelocity)
+            end
+            lastVelocity = velocity
+        end
+    end))
+
+    enableAntiRagdollControls()
+    cleanupRagdoll()
+end
+
+local function startAntiRagdoll()
+    _G.AntiRagdollEnabled = true
+    _G.antiKnockbackEnabled = true
+end
+
+local function stopAntiRagdoll()
+    _G.AntiRagdollEnabled = false
+    _G.antiKnockbackEnabled = false
+    clearAntiRagdollConnections()
+end
+
+localPlayer.CharacterAdded:Connect(function(char)
+    clearAntiRagdollConnections()
+    antiRagdollCharacter = nil; antiRagdollHumanoid = nil; antiRagdollRootPart = nil; antiRagdollAnimator = nil
+    local humanoid = char:WaitForChild("Humanoid", 10)
+    local rootPart = char:WaitForChild("HumanoidRootPart", 10)
+    if not humanoid or not rootPart then return end
+    task.wait(0.2)
+    setupAntiRagdollCharacter(char)
+    if _G.AntiRagdollEnabled or _G.antiKnockbackEnabled then
+        setupAntiRagdollConnections()
+    end
+end)
+
+if localPlayer.Character then
+    setupAntiRagdollCharacter(localPlayer.Character)
+    if _G.AntiRagdollEnabled or _G.antiKnockbackEnabled then
+        setupAntiRagdollConnections()
+    end
+end
+
+-- UI Toggle para sa Anti-Ragdoll (Nasa labas na at handa na para sa Tab mo)
+Tabs.MainTab:Toggle({
+    Title = "Anti Ragdoll & KnockBack",
+    Desc = "Prevents ragdoll and KnockBack",
+    Value = false,
+    Callback = function(state)
+        if state then
+            startAntiRagdoll()
+            if localPlayer.Character then
+                setupAntiRagdollCharacter(localPlayer.Character)
+                setupAntiRagdollConnections()
+            end
+        else
+            stopAntiRagdoll()
+        end
+    end,
+})
 
 
 
