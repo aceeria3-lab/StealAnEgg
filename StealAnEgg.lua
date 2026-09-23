@@ -245,7 +245,6 @@ Tabs.MainTab:Toggle({
 })
 
 
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -432,9 +431,9 @@ if localPlayer.Character then
 end
 
 -- UI Toggle para sa Anti-Ragdoll (Nasa labas na at handa na para sa Tab mo)
-Tabs.MainTab:Toggle({
-    Title = "Anti Ragdoll & KnockBack",
-    Desc = "Prevents ragdoll and KnockBack",
+Tabs.SettingTab:Toggle({
+    Title = "Anti Ragdoll + Knockback Fix",
+    Desc = "Prevents ragdoll states and suppresses excessive knockback",
     Value = false,
     Callback = function(state)
         if state then
@@ -449,6 +448,8 @@ Tabs.MainTab:Toggle({
     end,
 })
 
+
+    
 -- idk 
 
 
