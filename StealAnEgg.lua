@@ -474,31 +474,55 @@ local Tabs = {
 	}),
 }
 
--- ==================== ANTI TREADMILL TOGGLE ====================
-Tabs.AutomaticallyTab:Toggle({
-	Title = "Auto Leave Treadmill",
-	Desc = "Automatically asks to doff treadmill",
-	Value = false,
-	Callback = function(state)
-		if state then
-			-- Pwedeng lagyan ng loop o kaya isang beses lang i-trigger depende sa gusto mo.
-			-- Kung gusto mo na paulit-ulit habang naka-on:
-			_G.AntiTreadmillActive = true
-			task.spawn(function()
-				while _G.AntiTreadmillActive do
-					local success, err = pcall(function()
-						local Event = game:GetService("ReplicatedStorage"):FindFirstChild("Packages"):FindFirstChild("Networking"):FindFirstChild("RF/Treadmill/AskDoff")
-						if Event then
-							Event:InvokeServer()
-						end
-					end)
-					task.wait(0.001) -- Pwedeng baguhin ang interval kung gaano kadalas i-invoke
-				end
-			end)
-		else
-			_G.AntiTreadmillActive = false
-		end
-	end,
+-- ====================================================================
+-- DISABLE TREADMILL (BLOCK ASGWEARSTILL) TOGGLE (MAIN TAB)
+-- ====================================================================
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local isDisableTreadmillActive = false
+local originalNamecall = nil
+
+-- Kunin ang tamang Remote Function para sa AskWearStill
+local treadmillWearEvent = ReplicatedStorage:FindFirstChild("Packages")
+    and ReplicatedStorage.Packages:FindFirstChild("Networking")
+    and ReplicatedStorage.Packages.Networking:FindFirstChild("RF/Treadmill/AskWearStill")
+
+Tabs.MainTab:Toggle({
+    Title = "Disable Treadmill",
+    Desc = "Ignore ThreadMill Trigger Animation",
+    Value = false,
+    Callback = function(state)
+        isDisableTreadmillActive = state
+
+        if state then
+            -- ===== [TOGGLE ON: I-block ang AskWearStill] =====
+            if not originalNamecall and setmetatable and getrawmetatable then
+                local mt = getrawmetatable(game)
+                originalNamecall = mt.__namecall
+                
+                setreadonly(mt, false)
+                mt.__namecall = newcclosure(function(self, ...)
+                    local method = getnamecallmethod()
+                    if isDisableTreadmillActive and self == treadmillWearEvent and (method == "InvokeServer" or method == "Invoke") then
+                        -- Harangin ang pag-invoke para hindi magtuloy-tuloy ang treadmill state/animation
+                        return nil
+                    end
+                    return originalNamecall(self, ...)
+                end)
+                setreadonly(mt, true)
+            end
+        else
+            -- ===== [TOGGLE OFF: Ibalik sa dati] =====
+            isDisableTreadmillActive = false
+            if originalNamecall and setmetatable and getrawmetatable then
+                local mt = getrawmetatable(game)
+                setreadonly(mt, false)
+                mt.__namecall = originalNamecall
+                setreadonly(mt, true)
+                originalNamecall = nil
+            end
+        end
+    end,
 })
 
 
