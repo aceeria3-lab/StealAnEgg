@@ -487,7 +487,7 @@ local treadmillWearEvent = ReplicatedStorage:FindFirstChild("Packages")
     and ReplicatedStorage.Packages:FindFirstChild("Networking")
     and ReplicatedStorage.Packages.Networking:FindFirstChild("RF/Treadmill/AskWearStill")
 
-Tabs.MainTab:Toggle({
+Tabs.AutomaticallyTab:Toggle({
     Title = "Disable Treadmill",
     Desc = "Ignore ThreadMill Trigger Animation",
     Value = false,
