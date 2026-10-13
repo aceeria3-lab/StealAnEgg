@@ -1,76 +1,185 @@
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+
+local silenced = {}
+if type(getconnections) == "function" then
+    local ok, conns = pcall(getconnections, LocalPlayer.Idled)
+    if ok and type(conns) == "table" then
+        for _, c in ipairs(conns) do
+            pcall(function() c:Disable() end)
+            silenced[#silenced + 1] = c
+        end
+    end
+end
+
+
+local dummy = setmetatable({}, { __index = function() return function() end end })
+if type(getgc) == "function" and type(debug) == "table" then
+    local ok, objects = pcall(getgc, false)
+    if ok and type(objects) == "table" then
+        for _, fn in ipairs(objects) do
+            if type(fn) == "function" and islclosure(fn) then
+                local ok2, src = pcall(debug.info, fn, "s")
+                if ok2 and type(src) == "string" and string.find(src, "AntiAFK", 1, true) then
+                    local ok3, ups = pcall(debug.getupvalues, fn)
+                    if ok3 and type(ups) == "table" then
+                        for k, v in pairs(ups) do
+                            if typeof(v) == "Instance" and v.ClassName == "TeleportService" then
+                                pcall(debug.setupvalue, fn, k, dummy)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+
+print("Anti-AFK + Bypass ✅")
+
+
+
+
+
+
 local RunService = game:GetService("RunService")
 
+
+
 local cloneref = (cloneref or clonereference or function(instance)
+
 	return instance
+
 end)
+
 local ReplicatedStorage = cloneref(game:GetService("ReplicatedStorage"))
+
 local HttpService = cloneref(game:GetService("HttpService"))
+
+
 
 local WindUI
 
+
+
 do
+
 	local ok, result = pcall(function()
+
 		return require("./src/Init")
+
 	end)
 
+
+
 	if ok then
+
 		WindUI = result
+
 	else
+
 		if cloneref(game:GetService("RunService")):IsStudio() then
+
 			WindUI = require(cloneref(ReplicatedStorage:WaitForChild("WindUI"):WaitForChild("Init")))
+
 		else
+
 			WindUI =
-				loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/aceeria3-lab/WINDUIIOHUB/refs/heads/main/dist/main2.lua"))()
+
 		end
+
 	end
+
 end
 
 
 
 
--- */  Window  /* --
+
+
+
 local Window = WindUI:CreateWindow({
-	Title = "IOHUB",
-	--Author = "by .ftgs â€¢ Footagesus",
-	Folder = "ftgshub",
-	Icon = "solar:folder-2-bold-duotone",
-	--Theme = "Mellowsi",
-	--IconSize = 22*2,
-	NewElements = true,
-	--Size = UDim2.fromOffset(700,700),
 
-	HideSearchBar = false,
+    Title = "IOHUB",
 
-	OpenButton = {
-		Title = "IOHUB", -- can be changed
-		CornerRadius = UDim.new(1, 0), -- fully rounded
-		StrokeThickness = 3, -- removing outline
-		Enabled = true, -- enable or disable openbutton
-		Draggable = true,
-		OnlyMobile = false,
-		Scale = 0.5,
+    Folder = "IOHUB",
 
-		Color = ColorSequence.new( -- gradient
-			Color3.fromHex("#30FF6A"),
-			Color3.fromHex("#e7ff2f")
-		),
-	},
-	Topbar = {
-		Height = 44,
-		ButtonsType = "Mac", -- Default or Mac
-	},
+    Icon = "rbxassetid://139934599708171",
+
+    IconSize = 35,
+
+    
+
+    NewElements = true,
+
+    HideSearchBar = false,
+
+
+
+    OpenButton = {
+
+        Title = "IOHUB",
+
+        CornerRadius = UDim.new(1, 0),
+
+        StrokeThickness = 3,
+
+        Enabled = true,
+
+        Draggable = true,
+
+        OnlyMobile = false,
+
+        Scale = 0.8,
+
+        Color = ColorSequence.new(
+
+            Color3.fromHex("#30FF6A"),
+
+            Color3.fromHex("#e7ff2f")
+
+        ),
+
+    },
+
+    Topbar = {
+
+        Height = 44,
+
+        ButtonsType = "Mac",
+
+    },
+
 })
 
 
 
 
+
+
+
 -- */  Colors  /* --
+
 local Purple = Color3.fromHex("#7775F2")
+
 local Yellow = Color3.fromHex("#ECA201")
+
 local Green = Color3.fromHex("#10C550")
+
 local Grey = Color3.fromHex("#83889E")
+
 local Blue = Color3.fromHex("#257AF7")
+
 local Red = Color3.fromHex("#EF4F1D")
+
+
+
 
 
 
@@ -203,6 +312,9 @@ Tabs.MainTab:Toggle({
 		isEnabled = state
 	end,
 })
+
+
+Tabs.MainTab:Select()
 
 
 
@@ -450,16 +562,13 @@ Tabs.MainTab:Toggle({
 
 
     
--- idk 
+ 
 
 
 
--- this is for auto select tab 
--- when script is loaded if not
--- the right panel is empty
-task.defer(function()
-	Tabs.MainTab:Select()
-end)
+
+	
+
 
 
 
@@ -579,6 +688,251 @@ Tabs.AutomaticallyTab:Toggle({
 
 
 
+local Tabs = {
+	PredictorTab = Window:Tab({
+		Title = "Egg Predict",
+		Icon = "eye",
+	}),
+}
+
+
+
+local TabsRef = (type(Tabs) == "table" and Tabs)
+    or (type(_G.Tabs) == "table" and _G.Tabs)
+    or (type(getgenv) == "function" and type(getgenv().Tabs) == "table" and getgenv().Tabs)
+    or nil
+
+local PredictorTab = TabsRef and (TabsRef.PredictorTab or TabsRef.PredicTab or TabsRef.EggPredict) or nil
+
+if not PredictorTab then
+    
+    return
+end
+
+local Players           = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local localPlayer       = Players.LocalPlayer
+
+
+local COLOR_NAME      = "#FFFFFF"   -- white
+local COLOR_MONEY     = "#4DFF7A"   -- green (money/sec)
+local COLOR_PLACED    = "#FFD34D"   -- gold (placed)
+local COLOR_INVENTORY = "#7FD8FF"   -- cyan (inventory, clickable)
+
+
+local function tryRequire(inst)
+    if not inst then return nil end
+    local ok, result = pcall(require, inst)
+    return ok and result or nil
+end
+local function findRS(...)
+    local node = ReplicatedStorage
+    for i, name in ipairs({...}) do
+        node = (i == 1) and node:WaitForChild(name, 10) or (node and node:FindFirstChild(name))
+        if not node then return nil end
+    end
+    return node
+end
+
+local Assets     = tryRequire(findRS("Data", "Assets"))
+local EggState   = tryRequire(findRS("Client", "EggState"))
+local Mutations  = tryRequire(findRS("Shared", "Modules", "Mutations"))
+
+local networking = ReplicatedStorage:FindFirstChild("Packages")
+networking = networking and networking:FindFirstChild("Networking") or nil
+
+
+local function formatMoney(n)
+    n = tonumber(n) or 0
+    if n >= 1e12 then return string.format("%.2fT", n/1e12) end
+    if n >= 1e9  then return string.format("%.2fB", n/1e9)  end
+    if n >= 1e6  then return string.format("%.2fM", n/1e6)  end
+    if n >= 1000 then return string.format("%.1fK", n/1000) end
+    return tostring(math.floor(n))
+end
+local function scaleFactor(s)
+    s = tonumber(s) or 1
+    if s > 5 then return (s/5)^1.2 * 19.637875755794113 end
+    return s^1.85
+end
+local function mutationMult(muts)
+    muts = type(muts) == "table" and muts or {}
+    if Mutations and type(Mutations.EarningsFor) == "function" then
+        local ok, r = pcall(Mutations.EarningsFor, muts)
+        if ok and type(r) == "number" then return r end
+    end
+    return 1
+end
+local function getAssetInfo(category)
+    category = tostring(category)
+    local dir = Assets and Assets.Directory
+    local entry = type(dir) == "table" and dir[category] or nil
+    if type(entry) ~= "table" then
+        return { Name = category, EarningRate = 0 }
+    end
+    return {
+        Name        = tostring(entry.DisplayName or category),
+        EarningRate = tonumber(entry.EarningRate) or 0,
+    }
+end
+local function getIncome(asset, scale, muts)
+    return asset.EarningRate * scaleFactor(scale) * mutationMult(muts)
+end
+local function readInventory()
+    if not EggState or type(EggState.ReadOwnerEggs) ~= "function" then return {} end
+    local ok, data = pcall(EggState.ReadOwnerEggs, localPlayer.UserId)
+    if not ok or type(data) ~= "table" then return {} end
+    local list = {}
+    for uid, rec in pairs(data) do
+        if type(rec) == "table" and rec.AssetCategory then
+            local asset = getAssetInfo(rec.AssetCategory)
+            local scale = tonumber(rec.AssetScale) or 1
+            local muts  = type(rec.Mutations) == "table" and rec.Mutations or {}
+            table.insert(list, {
+                Uid    = tostring(uid),
+                Asset  = asset,
+                Scale  = scale,
+                Income = getIncome(asset, scale, muts),
+                Placed = rec.Placement ~= nil,
+            })
+        end
+    end
+    return list
+end
+
+
+local function wearEgg(uid)
+    if type(uid) ~= "string" then return false end
+    if EggState and type(EggState.WearEggTool) == "function" then
+        local ok = pcall(EggState.WearEggTool, uid)
+        if ok then return true end
+    end
+    if networking then
+        local rf = networking:FindFirstChild("RF/EggWorld/AskWearTool")
+        if rf and rf:IsA("RemoteFunction") then
+            local ok = pcall(rf.InvokeServer, rf, uid)
+            if ok then return true end
+        end
+    end
+    return false
+end
+
+
+local function addParagraph(parent, opts)
+    if type(parent.CreateParagraph) == "function" then return parent:CreateParagraph(opts) end
+    if type(parent.Paragraph) == "function"       then return parent:Paragraph(opts)       end
+    if type(parent.CreateText) == "function"      then return parent:CreateText(opts)      end
+    if type(parent.Text) == "function"            then return parent:Text(opts)            end
+    return nil
+end
+local function addButton(parent, opts)
+    if type(parent.CreateButton) == "function" then return parent:CreateButton(opts) end
+    if type(parent.Button) == "function"       then return parent:Button(opts)       end
+    return nil
+end
+local function destroyHandle(handle)
+    if not handle then return end
+    for _, method in ipairs({ "Destroy", "Remove", "Delete" }) do
+        if type(handle[method]) == "function" then
+            pcall(handle[method], handle)
+            return
+        end
+    end
+end
+
+
+local eggButtons = {}
+local lastHash = ""
+local MAX_EGGS = 60
+
+local function computeHash(eggs)
+    local sorted = {}
+    for _, e in ipairs(eggs) do sorted[#sorted+1] = e end
+    table.sort(sorted, function(a, b) return a.Uid < b.Uid end)
+    local parts = {}
+    for _, e in ipairs(sorted) do
+        parts[#parts+1] = string.format("%s:%s:%s:%s",
+            e.Uid, tostring(e.Scale), tostring(e.Income), tostring(e.Placed))
+    end
+    return table.concat(parts, "|")
+end
+
+local function clearButtons()
+    for _, entry in ipairs(eggButtons) do
+        destroyHandle(entry.Handle)
+    end
+    eggButtons = {}
+end
+
+local function render(force)
+    local eggs = readInventory()
+    table.sort(eggs, function(a, b) return a.Income > b.Income end)
+
+    local shown = eggs
+    if #eggs > MAX_EGGS then
+        shown = {}
+        for i = 1, MAX_EGGS do shown[i] = eggs[i] end
+    end
+
+    local h = computeHash(shown) .. "|" .. tostring(#eggs)
+    if not force and h == lastHash then return end
+    lastHash = h
+
+    clearButtons()
+
+    if #eggs == 0 then
+        local p = addParagraph(PredictorTab, {
+            Title = "Walang eggs",
+            Content = "Wala pang eggs sa inventory mo.",
+        })
+        if p then eggButtons[1] = { Handle = p, Uid = nil } end
+        return
+    end
+
+    for _, egg in ipairs(shown) do
+        local state = egg.Placed and "Placed" or "Inventory"
+        local stateColor = egg.Placed and COLOR_PLACED or COLOR_INVENTORY
+
+
+        local title = string.format(
+            '<font color="%s">%s</font>  <font color="%s">$%s/s</font>  <font color="%s">%s</font>',
+            COLOR_NAME, egg.Asset.Name,
+            COLOR_MONEY, formatMoney(egg.Income),
+            stateColor, state
+        )
+
+        local eggUid   = egg.Uid
+        local isPlaced = egg.Placed
+
+        local btn = addButton(PredictorTab, {
+            Title    = title,
+            RichText = true,
+            Callback = function()
+                if isPlaced then return end
+                wearEgg(eggUid)
+            end,
+        })
+
+        if btn then
+
+            pcall(function()
+                if type(btn.Set) == "function" then
+                    btn:Set({ RichText = true, Title = title })
+                end
+            end)
+            eggButtons[#eggButtons + 1] = { Handle = btn, Uid = eggUid }
+        end
+    end
+end
+
+
+task.spawn(function()
+    pcall(render, true)
+    while true do
+        task.wait(2)
+        pcall(render, false)
+    end
+end)
 
 
 
