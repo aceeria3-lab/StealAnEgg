@@ -941,24 +941,428 @@ end)
 
 -- Misc Section --
 
+-- ====================================================================
+-- MISC TAB SETUP
+-- ====================================================================
 local Tabs = {
 	MiscTab = Window:Tab({
-		Title = "Soon",
-		Icon = "eye",
+		Title = "Misc",
+		Icon = "layout-grid",
 	}),
 }
 
-Tabs.MiscTab:Toggle({
-	Title = "Esp Eggs",
-	Desc = "Show Highlights to Eggs",
-	Value = false,
-	Callback = function(state)
+-- ====================================================================
+-- RARITY FILTER DROPDOWN
+-- ====================================================================
+local HARDCODED_RARITIES = {
+	"Common", "Uncommon", "Rare", "Epic", "Legendary",
+	"Mythic", "Cosmic", "Secret", "Eternal", "Divine",
+}
 
-	featureEnabled = state
-		
+local allowedRarities    = {}
+local rarityFilterActive = false
+
+Tabs.MiscTab:Dropdown({
+	Title = "Filter by Rarity",
+	Desc  = "Show only these rarities (empty = all)",
+	Values = HARDCODED_RARITIES,
+	Value = {},
+	AllowNone = true,
+	Multi = true,
+	Callback = function(selectedTable)
+		allowedRarities = {}
+		local any = false
+
+		if type(selectedTable) == "table" then
+			for key, value in pairs(selectedTable) do
+				local label
+				if type(key) == "number" and type(value) == "string" then
+					label = value
+				elseif type(key) == "string" and value == true then
+					label = key
+				end
+				if label and #label > 0 then
+					allowedRarities[label] = true
+					any = true
+				end
+			end
+		end
+
+		rarityFilterActive = any
+		print("[ESP] Filter active:", any)
 	end,
 })
 
+-- ====================================================================
+-- EGG ESP TOGGLE
+-- ====================================================================
+local eggEspThread = nil
+
+Tabs.MiscTab:Toggle({
+	Title = "Steal Egg ESP",
+	Desc  = "Highlights spawned eggs on the map",
+	Value = false,
+	Callback = function(state)
+		local CoreGui           = game:GetService("CoreGui")
+		local Players           = game:GetService("Players")
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		local LocalPlayer       = Players.LocalPlayer
+
+		local function clearAll()
+			for _, parent in ipairs({ CoreGui, LocalPlayer:FindFirstChildOfClass("PlayerGui") }) do
+				if parent then
+					local old = parent:FindFirstChild("StealESP")
+					if old then old:Destroy() end
+				end
+			end
+		end
+
+		if state then
+			local success, err = pcall(function()
+				local eggState   = require(ReplicatedStorage.Client.EggState)
+				local assets     = require(ReplicatedStorage.Data.Assets)
+				local eggRecords = require(ReplicatedStorage.Shared.Util.EggRecords)
+				local mutations  = require(ReplicatedStorage.Shared.Modules.Mutations)
+
+				clearAll()
+				local ScreenGui = Instance.new("ScreenGui")
+				ScreenGui.Name = "StealESP"
+				ScreenGui.ResetOnSpawn = false
+				ScreenGui.IgnoreGuiInset = true
+				ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+				ScreenGui.DisplayOrder = 100
+
+				local ok = pcall(function() ScreenGui.Parent = CoreGui end)
+				if not ok then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+				local ActiveESPs = {}
+
+				-- ═══ RAINBOW (Secret / Eternal / Divine lang) ═══
+				local SPECIAL_RARITY_NAMES = {
+					["Secret"]  = true,
+					["Eternal"] = true,
+					["Divine"]  = true,
+				}
+
+				local function isSpecialRarity(rarityName)
+					return SPECIAL_RARITY_NAMES[tostring(rarityName)] == true
+				end
+
+				local rainbowGradients = {}
+
+				local function makeRainbowGradient(parent)
+					local gradient = Instance.new("UIGradient")
+					gradient.Name = "RainbowFX"
+					gradient.Color = ColorSequence.new({
+						ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 0, 0)),
+						ColorSequenceKeypoint.new(0.071, Color3.fromRGB(255, 128, 0)),
+						ColorSequenceKeypoint.new(0.143, Color3.fromRGB(255, 255, 0)),
+						ColorSequenceKeypoint.new(0.214, Color3.fromRGB(0, 255, 0)),
+						ColorSequenceKeypoint.new(0.286, Color3.fromRGB(0, 255, 255)),
+						ColorSequenceKeypoint.new(0.357, Color3.fromRGB(0, 100, 255)),
+						ColorSequenceKeypoint.new(0.429, Color3.fromRGB(180, 0, 255)),
+						ColorSequenceKeypoint.new(0.500, Color3.fromRGB(255, 0, 0)),
+						ColorSequenceKeypoint.new(0.571, Color3.fromRGB(255, 128, 0)),
+						ColorSequenceKeypoint.new(0.643, Color3.fromRGB(255, 255, 0)),
+						ColorSequenceKeypoint.new(0.714, Color3.fromRGB(0, 255, 0)),
+						ColorSequenceKeypoint.new(0.786, Color3.fromRGB(0, 255, 255)),
+						ColorSequenceKeypoint.new(0.857, Color3.fromRGB(0, 100, 255)),
+						ColorSequenceKeypoint.new(0.929, Color3.fromRGB(180, 0, 255)),
+						ColorSequenceKeypoint.new(1.000, Color3.fromRGB(255, 0, 0)),
+					})
+					gradient.Rotation = 0
+					gradient.Offset = Vector2.new(0, 0)
+					gradient.Parent = parent
+					rainbowGradients[gradient] = { offset = 0 }
+					return gradient
+				end
+
+				-- ═══ HELPERS ═══
+				local function formatNumber(n)
+					n = tonumber(n) or 0
+					if n >= 1e12 then return string.format("%.2fT", n/1e12) end
+					if n >= 1e9 then return string.format("%.2fB", n/1e9) end
+					if n >= 1e6 then return string.format("%.2fM", n/1e6) end
+					if n >= 1e3 then return string.format("%.1fK", n/1e3) end
+					return tostring(math.floor(n))
+				end
+
+				-- ✅ FIXED: KG formatting
+				--    < 1000      → "497 KG"
+				--    < 1,000,000 → "1.8K KG"
+				--    >= 1M       → "1.5M KG"
+				local function formatWeight(n)
+					n = tonumber(n) or 0
+					if n >= 1e6 then
+						return string.format("%.1fM KG", n / 1e6)
+					end
+					if n >= 1000 then
+						return string.format("%.1fK KG", n / 1000)
+					end
+					return string.format("%d KG", math.floor(n + 0.5))
+				end
+
+				local function getPetInfo(petName)
+					if not petName then return nil end
+					return assets.Directory[petName]
+				end
+
+				local function getWeight(petName, scale)
+					local ok, result = pcall(eggRecords.WeightKgForScale, petName, scale)
+					if ok and tonumber(result) then return tonumber(result) end
+					return 0
+				end
+
+				local function getValue(petInfo, scale, muts)
+					if not petInfo then return 0 end
+					local scaleFactor = scale > 5
+						and (scale / 5) ^ 1.2 * 19.637875755794113
+						or  scale ^ 1.85
+					local mutMult = 1
+					local ok, result = pcall(mutations.EarningsFor, muts or {})
+					if ok and type(result) == "number" then mutMult = result end
+					return (petInfo.EarningRate or 0) * scaleFactor * mutMult
+				end
+
+				local function getRarityColor(petInfo)
+					if not petInfo or not petInfo.Rarity then
+						return Color3.fromRGB(255, 255, 255)
+					end
+					if typeof(petInfo.Rarity.Color) == "Color3" then
+						return petInfo.Rarity.Color
+					end
+					return Color3.fromRGB(255, 255, 255)
+				end
+
+				local function getRarityName(petInfo)
+					if not petInfo or type(petInfo.Rarity) ~= "table" then return "?" end
+					return petInfo.Rarity.DisplayName or petInfo.Rarity._id or "?"
+				end
+
+				-- ✅ Convert Color3 → hex string para sa RichText
+				local function colorToHex(c)
+					if typeof(c) ~= "Color3" then
+						return "#FFD34D"
+					end
+					local r = math.floor(c.R * 255 + 0.5)
+					local g = math.floor(c.G * 255 + 0.5)
+					local b = math.floor(c.B * 255 + 0.5)
+					return string.format("#%02X%02X%02X", r, g, b)
+				end
+
+				-- ═══ BILLBOARD ═══
+				local function createBillboard()
+					local bb = Instance.new("BillboardGui")
+					bb.Name = "StealESP_BB"
+					bb.Size = UDim2.new(0, 240, 0, 72)
+					bb.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
+					bb.AlwaysOnTop = true
+					bb.MaxDistance = math.huge
+					bb.LightInfluence = 0
+
+					local l1 = Instance.new("TextLabel", bb)
+					l1.Name = "L1"
+					l1.Size = UDim2.new(1, 0, 0, 24)
+					l1.Position = UDim2.new(0, 0, 0, 0)
+					l1.BackgroundTransparency = 1
+					l1.TextColor3 = Color3.fromRGB(3, 211, 252)
+					l1.TextSize = 20
+					l1.Font = Enum.Font.GothamBold
+					l1.TextStrokeTransparency = 0
+					l1.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+					l1.Text = "..."
+
+					-- Line 2: Rarity (colored) | KG (GOLD via RichText)
+					local l2 = Instance.new("TextLabel", bb)
+					l2.Name = "L2"
+					l2.Size = UDim2.new(1, 0, 0, 22)
+					l2.Position = UDim2.new(0, 0, 0, 24)
+					l2.BackgroundTransparency = 1
+					l2.TextColor3 = Color3.fromRGB(255, 215, 0)
+					l2.TextSize = 17
+					l2.Font = Enum.Font.GothamBold
+					l2.TextStrokeTransparency = 0
+					l2.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+					l2.RichText = true               -- ✅ Enable RichText
+					l2.Text = ""
+
+					local l3 = Instance.new("TextLabel", bb)
+					l3.Name = "L3"
+					l3.Size = UDim2.new(1, 0, 0, 24)
+					l3.Position = UDim2.new(0, 0, 0, 46)
+					l3.BackgroundTransparency = 1
+					l3.TextColor3 = Color3.fromRGB(100, 255, 100)
+					l3.TextSize = 20
+					l3.Font = Enum.Font.GothamBold
+					l3.TextStrokeTransparency = 0
+					l3.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+
+					return bb
+				end
+
+				local function updateBillboard(bb, data)
+					if not bb or not bb.Parent then return end
+
+					local l1 = bb:FindFirstChild("L1")
+					local l2 = bb:FindFirstChild("L2")
+					local l3 = bb:FindFirstChild("L3")
+
+					if l1 then
+						l1.Text = data.PetName
+
+						local g = l1:FindFirstChild("RainbowFX")
+						if data.IsSpecial then
+							if not g then
+								makeRainbowGradient(l1)
+							end
+							l1.TextColor3 = Color3.new(1, 1, 1)
+						else
+							if g then
+								rainbowGradients[g] = nil
+								g:Destroy()
+							end
+							l1.TextColor3 = Color3.fromRGB(3, 211, 252)
+						end
+					end
+
+					if l2 then
+						-- ✅ Rarity color + KG gold (RichText)
+						local rarityHex = colorToHex(data.Color or Color3.fromRGB(255, 215, 0))
+						l2.Text = string.format(
+							'<font color="%s">%s</font> <font color="#FFD34D">| %s</font>',
+							rarityHex,
+							string.upper(data.Rarity),
+							formatWeight(data.Weight)
+						)
+					end
+
+					if l3 then
+						l3.Text = "$" .. formatNumber(data.Value) .. "/s"
+					end
+				end
+
+				local function positionBillboard(entry, bottomCFrame)
+					if not entry or not entry.Billboard then return end
+					if not entry.Billboard.Parent then return end
+					if typeof(bottomCFrame) ~= "CFrame" then return end
+
+					local bb = entry.Billboard
+					bb.Adornee = workspace.Terrain
+					bb.StudsOffsetWorldSpace = bottomCFrame.Position - workspace.Terrain.Position + Vector3.new(0, 5, 0)
+				end
+
+				-- ═══ SCAN FIELD EGGS ═══
+				local function scanFieldEggs()
+					local ok, result = pcall(eggState.ReadFieldEggs)
+					if not ok then return end
+					if type(result) ~= "table" then return end
+
+					local records = result.Records
+					if type(records) ~= "table" then return end
+
+					local seen = {}
+					local count = 0
+
+					for uid, record in pairs(records) do
+						if type(record) == "table" and record.State ~= "Claimed" then
+							local petName = record.AssetCategory
+							local petInfo = getPetInfo(petName)
+
+							if petInfo and typeof(record.BottomCFrame) == "CFrame" then
+								local rarityName = getRarityName(petInfo)
+
+								local passes = true
+								if rarityFilterActive then
+									passes = allowedRarities[rarityName] == true
+								end
+
+								if passes then
+									seen[uid] = true
+									count = count + 1
+
+									if not ActiveESPs[uid] then
+										local bb = createBillboard()
+										bb.Parent = ScreenGui
+										ActiveESPs[uid] = { Billboard = bb }
+									end
+
+									local entry = ActiveESPs[uid]
+									local scale = tonumber(record.AssetScale) or 1
+
+									updateBillboard(entry.Billboard, {
+										PetName   = petInfo.DisplayName or petName,
+										Rarity    = rarityName,
+										Color     = getRarityColor(petInfo),
+										Weight    = getWeight(petName, scale),
+										Value     = getValue(petInfo, scale, record.Mutations),
+										IsSpecial = isSpecialRarity(rarityName),
+									})
+
+									positionBillboard(entry, record.BottomCFrame)
+								end
+							end
+						end
+					end
+
+					for uid, entry in pairs(ActiveESPs) do
+						if not seen[uid] then
+							if entry.Billboard and entry.Billboard.Parent then
+								local l1 = entry.Billboard:FindFirstChild("L1")
+								if l1 then
+									local g = l1:FindFirstChild("RainbowFX")
+									if g then rainbowGradients[g] = nil end
+								end
+								entry.Billboard:Destroy()
+							end
+							ActiveESPs[uid] = nil
+						end
+					end
+
+					return count
+				end
+
+				-- ═══ RAINBOW ANIMATION ═══
+				task.spawn(function()
+					while true do
+						task.wait(0.03)
+						for gradient, config in pairs(rainbowGradients) do
+							if gradient and gradient.Parent then
+								config.offset = config.offset + 0.008
+								if config.offset >= 0.5 then
+									config.offset = 0
+								end
+								gradient.Offset = Vector2.new(config.offset, 0)
+							else
+								rainbowGradients[gradient] = nil
+							end
+						end
+					end
+				end)
+
+				-- ═══ MAIN ESP LOOP ═══
+				eggEspThread = task.spawn(function()
+					while true do
+						pcall(scanFieldEggs)
+						task.wait(1)
+					end
+				end)
+
+				print("✅ STEAL ESP LOADED")
+			end)
+
+			if not success then
+				warn("[Egg ESP Error]:", err)
+			end
+		else
+			if eggEspThread then
+				pcall(task.cancel, eggEspThread)
+				eggEspThread = nil
+			end
+			clearAll()
+			print("❌ STEAL ESP OFF")
+		end
+	end,
+})
 -- Shop Section --
 
 local Tabs = {
