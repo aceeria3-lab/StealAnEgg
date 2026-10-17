@@ -1,4 +1,4 @@
--- version 3
+-- version 4
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -307,7 +307,8 @@ end)
 Tabs.MainTab:Toggle({
 	Title = "Anti Chase",
 	Desc = "Bugged the Egg Guardian (Sometimes Not Work)",
-	Value = false,
+	Flag = "AntiChase",
+Value = false,
 	Callback = function(state)
 		isEnabled = state
 	end,
@@ -324,7 +325,8 @@ local isEnabled = false
 Tabs.MainTab:Toggle({
 	Title = "Instant Prompt",
 	Desc = "Make the Prompt Becomes One Tap",
-	Value = false,
+	Flag = "InstantPrompt",
+Value = false,
 	Callback = function(state)
 		isEnabled = state
 		
@@ -546,7 +548,8 @@ end
 Tabs.MainTab:Toggle({
     Title = "Anti Ragdoll & KnockBack",
     Desc = "Prevents ragdoll and knockback",
-    Value = false,
+   Flag = "AntiRagdoll",
+ Value = false,
     Callback = function(state)
         if state then
             startAntiRagdoll()
@@ -561,17 +564,55 @@ Tabs.MainTab:Toggle({
 })
 
 
-    
- 
+  -- ====================================================================
+-- ANTI TRAP TOGGLE (WITH WORKSPACE.TRANSIENT)
+-- ====================================================================
+local Workspace = game:GetService("Workspace")
 
+local isAntiTrapActive = false
+local antiTrapConnection = nil
 
+Tabs.MainTab:Toggle({
+    Title = "Anti Trap",
+    Desc = "Automatically Remove Traps",
+    Flag = "AntiTrap",
+Value = false,
+    Callback = function(state)
+        isAntiTrapActive = state
+        
+        if state then
+            -- ===== [TOGGLE ON] =====
+            antiTrapConnection = task.spawn(function()
+                while isAntiTrapActive do
+                    pcall(function()
+                        -- Burahin ang __DEBRIS folder kung nandyan
+                        local debrisFolder = Workspace:FindFirstChild("__DEBRIS")
+                        if debrisFolder then
+                            debrisFolder:Destroy()
+                        end
+                        
+                        -- Burahin ang Transient folder kung nandyan
+                        local transientFolder = Workspace:FindFirstChild("Transient")
+                        if transientFolder then
+                            transientFolder:Destroy()
+                        end
+                    end)
+                    -- Maghintay ng kaunting segundo bago mag-scan ulit para maiwasan ang lag
+                    task.wait(0.5) 
+                end
+            end)
+        else
+            -- ===== [TOGGLE OFF] =====
+            isAntiTrapActive = false
+            if antiTrapConnection then
+                task.cancel(antiTrapConnection)
+                antiTrapConnection = nil
+            end
+        end
+    end,
+})
 
-
-	
-
-
-
-
+  
 
 
 -- Automatically Section --
@@ -582,6 +623,9 @@ local Tabs = {
 		Icon = "workflow",
 	}),
 }
+
+
+--[[
 
 -- ====================================================================
 -- DISABLE TREADMILL (BLOCK ASGWEARSTILL) TOGGLE (MAIN TAB)
@@ -635,54 +679,7 @@ Tabs.AutomaticallyTab:Toggle({
 })
 
 
-
-
--- ====================================================================
--- ANTI TRAP TOGGLE (WITH WORKSPACE.TRANSIENT)
--- ====================================================================
-local Workspace = game:GetService("Workspace")
-
-local isAntiTrapActive = false
-local antiTrapConnection = nil
-
-Tabs.AutomaticallyTab:Toggle({
-    Title = "Anti Trap",
-    Desc = "Automatically Remove Traps",
-    Value = false,
-    Callback = function(state)
-        isAntiTrapActive = state
-        
-        if state then
-            -- ===== [TOGGLE ON] =====
-            antiTrapConnection = task.spawn(function()
-                while isAntiTrapActive do
-                    pcall(function()
-                        -- Burahin ang __DEBRIS folder kung nandyan
-                        local debrisFolder = Workspace:FindFirstChild("__DEBRIS")
-                        if debrisFolder then
-                            debrisFolder:Destroy()
-                        end
-                        
-                        -- Burahin ang Transient folder kung nandyan
-                        local transientFolder = Workspace:FindFirstChild("Transient")
-                        if transientFolder then
-                            transientFolder:Destroy()
-                        end
-                    end)
-                    -- Maghintay ng kaunting segundo bago mag-scan ulit para maiwasan ang lag
-                    task.wait(0.5) 
-                end
-            end)
-        else
-            -- ===== [TOGGLE OFF] =====
-            isAntiTrapActive = false
-            if antiTrapConnection then
-                task.cancel(antiTrapConnection)
-                antiTrapConnection = nil
-            end
-        end
-    end,
-})
+-- ]]
 
 
 
@@ -882,8 +879,8 @@ local function render(force)
 
     if #eggs == 0 then
         local p = addParagraph(PredictorTab, {
-            Title = "Walang eggs",
-            Content = "Wala pang eggs sa inventory mo.",
+            Title = "No Eggs",
+            Content = "Inventory Empty",
         })
         if p then eggButtons[1] = { Handle = p, Uid = nil } end
         return
@@ -965,7 +962,8 @@ local rarityFilterActive = false
 Tabs.MiscTab:Dropdown({
 	Title = "Filter by Rarity",
 	Desc  = "Show only these rarities (empty = all)",
-	Values = HARDCODED_RARITIES,
+	Flag = "RarityEggChoose",
+Values = HARDCODED_RARITIES,
 	Value = {},
 	AllowNone = true,
 	Multi = true,
@@ -999,9 +997,10 @@ Tabs.MiscTab:Dropdown({
 local eggEspThread = nil
 
 Tabs.MiscTab:Toggle({
-	Title = "Steal Egg ESP",
+	Title = "ESP Egg",
 	Desc  = "Highlights spawned eggs on the map",
-	Value = false,
+	Flag = "EspEgg",
+Value = false,
 	Callback = function(state)
 		local CoreGui           = game:GetService("CoreGui")
 		local Players           = game:GetService("Players")
@@ -1347,11 +1346,11 @@ Tabs.MiscTab:Toggle({
 					end
 				end)
 
-				print("✅ STEAL ESP LOADED")
+				
 			end)
 
 			if not success then
-				warn("[Egg ESP Error]:", err)
+				
 			end
 		else
 			if eggEspThread then
@@ -1359,29 +1358,23 @@ Tabs.MiscTab:Toggle({
 				eggEspThread = nil
 			end
 			clearAll()
-			print("❌ STEAL ESP OFF")
+			
 		end
 	end,
 })
+
+
+
 -- Shop Section --
+
+
 
 local Tabs = {
 	ShopTab = Window:Tab({
-		Title = "Soon",
+		Title = "Shop",
 		Icon = "shopping-cart",
 	}),
 }
-
-Tabs.ShopTab:Toggle({
-	Title = "Auto Buy Carrot",
-	Desc = "Automatically Buy Carrots",
-	Value = false,
-	Callback = function(state)
-
-	featureEnabled = state
-		
-	end,
-})
 
 
 -- Player Section --
@@ -1409,7 +1402,8 @@ local activeBillboards = {}
 Tabs.PlayerTab:Toggle({
 	Title = "Player ESP",
 	Desc = "Highlights other players with distance info",
-	Value = false,
+	Flag = "PlayerEsp",
+Value = false,
 	Callback = function(state)
 		-- Function para tanggalin ang lahat ng ESP
 		local function clearESP()
@@ -1700,7 +1694,8 @@ end
 Tabs.SettingTab:Toggle({
     Title = "Anti-Lag / Low Graphics",
     Desc = "Boosts FPS by disabling shadows, particles, and heavy textures",
-    Value = false,
+   Flag = "AntiLag",
+ Value = false,
     Callback = function(state)
         if state then
             -- ===== [TOGGLE ON] =====
@@ -1803,5 +1798,462 @@ Tabs.SettingTab:Toggle({
         end
     end,
 })
+
+
+Tabs.SettingTab:Space()
+
+--------------------------------------------------
+
+-- CONFIG MANAGER (Auto-load sa start)
+
+--------------------------------------------------
+
+local ConfigManager = Window.ConfigManager
+
+local CONFIG_NAME = "IOHUB_StealAnEggV2"  -- ⬅️ fixed name
+
+
+
+local function getConfig()
+
+    return ConfigManager:CreateConfig(CONFIG_NAME)
+
+end
+
+
+
+-- ====== SAVE BUTTON ======
+
+Tabs.SettingTab:Button({
+
+    Title = "Save Config",
+
+    Desc = "Save current settings",
+
+    Callback = function()
+
+        local cfg = getConfig()
+
+
+
+        if cfg:Save() then
+
+            WindUI:Notify({
+
+                Title = "Config Saved",
+
+                Content = "Settings saved as '" .. CONFIG_NAME .. "'",
+
+                Icon = "solar:check-circle-bold",
+
+                Duration = 3,
+
+            })
+
+        else
+
+            WindUI:Notify({
+
+                Title = "Save Failed",
+
+                Content = "Failed to Save.",
+
+                Icon = "solar:danger-bold",
+
+                Duration = 3,
+
+            })
+
+        end
+
+    end,
+
+})
+
+
+
+-- ====== DELETE BUTTON ======
+
+Tabs.SettingTab:Button({
+
+    Title = "Delete Config",
+
+    Desc = "Delete the saved config",
+
+    Callback = function()
+
+        local cfg = getConfig()
+
+
+
+        if cfg:Delete() then
+
+            WindUI:Notify({
+
+                Title = "Config Deleted",
+
+                Content = "'" .. CONFIG_NAME .. "' has been deleted!",
+
+                Icon = "solar:trash-bin-trash-bold",
+
+                Duration = 3,
+
+            })
+
+        else
+
+            WindUI:Notify({
+
+                Title = "Delete Failed",
+
+                Content = "Config Not Found '" .. CONFIG_NAME .. "'",
+
+                Icon = "solar:danger-bold",
+
+                Duration = 3,
+
+            })
+
+        end
+
+    end,
+
+})
+
+
+
+-- ====== AUTO-LOAD SA START (system-level, walang toggle) ======
+
+task.spawn(function()
+
+    task.wait(0.5)
+
+    pcall(function()
+
+        local cfg = getConfig()
+
+        cfg:Load()
+
+    end)
+
+end)
+
+
+
+
+
+-- ====================================================================
+-- SERVER TAB SETUP
+-- ====================================================================
+if not Window then return end
+
+local Tabs = {
+	ServerTab = Window:Tab({
+		Title = "Servers",
+		Icon  = "globe",
+	}),
+}
+
+if not Tabs.ServerTab then return end
+
+-- ═══ SHARED STATE (accessible sa both dropdown + toggle) ═══
+local DISPLAY_COUNT  = 10         -- default
+local forceRefresh   = false      -- para trigger re-render pag nag-change yung count
+
+-- ====================================================================
+-- ✅ COUNT DROPDOWN (nasa TAAS ng toggle)
+-- ====================================================================
+Tabs.ServerTab:Dropdown({
+	Title = "Servers to Show",
+	Desc  = "How many servers to display in the list",
+	Values = { "1", "5", "10" },
+	Value  = "10",                -- default
+	Multi  = false,
+	AllowNone = false,
+	Callback = function(selected)
+		local count
+		if type(selected) == "table" then
+			-- Pwedeng array o lookup table
+			for k, v in pairs(selected) do
+				if type(v) == "string" and tonumber(v) then
+					count = tonumber(v)
+					break
+				elseif type(k) == "string" and v == true and tonumber(k) then
+					count = tonumber(k)
+					break
+				end
+			end
+		elseif type(selected) == "string" then
+			count = tonumber(selected)
+		elseif type(selected) == "number" then
+			count = selected
+		end
+
+		if count and count > 0 then
+			DISPLAY_COUNT = count
+			forceRefresh = true          -- ✅ trigger re-render agad
+			
+		end
+	end,
+})
+
+-- ====================================================================
+-- LIVE SERVER LIST TOGGLE
+-- ====================================================================
+local toggleHandle = nil
+local fetchThread  = nil
+local renderThread = nil
+
+toggleHandle = Tabs.ServerTab:Toggle({
+	Title = "Live Server List",
+	Desc  = "Auto-Refresh every 1s Click to Hop.",
+	Value = true,
+	Callback = function(state)
+		-- ═══ SERVICES ═══
+		local HttpService     = game:GetService("HttpService")
+		local TeleportService = game:GetService("TeleportService")
+		local Players         = game:GetService("Players")
+		local LocalPlayer     = Players.LocalPlayer
+
+		-- ═══ CONFIG ═══
+		local COLOR_PLAYERS  = "#7FD8FF"
+		local COLOR_ROOM     = "#4DFF7A"
+		local COLOR_FULL     = "#FF6B6B"
+		local COLOR_ID       = "#FFD34D"
+		local FETCH_INTERVAL = 1         -- seconds
+		local RENDER_TICK    = 0.5       -- seconds
+		local EXCLUDE_FULL   = true
+
+		-- ═══ HELPERS ═══
+		local function formatId(id)
+			if type(id) ~= "string" then return "?" end
+			if #id <= 12 then return id end
+			return id:sub(1, 8) .. "..." .. id:sub(-4)
+		end
+
+		local function formatRoom(n)
+			n = tonumber(n) or 0
+			if n >= 1000 then return string.format("%.1fK", n/1000) end
+			return tostring(n)
+		end
+
+		local function destroyHandle(handle)
+			if not handle then return end
+			for _, m in ipairs({ "Destroy", "Remove", "Delete" }) do
+				if type(handle[m]) == "function" then
+					pcall(handle[m], handle)
+					return
+				end
+			end
+		end
+
+		-- ═══ STATE (local to callback) ═══
+		local serverList    = {}
+		local serverButtons = {}
+		local currentJobId  = tostring(game.JobId or "")
+		local lastHash      = ""
+		local isFetching    = false
+		local stopSignal    = false
+		local lastCount     = DISPLAY_COUNT
+
+		-- ═══ FETCH ═══
+		local function fetchServers()
+			if isFetching then return end
+			isFetching = true
+
+			local url = string.format(
+				"https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&excludeFullGames=true&limit=100",
+				game.PlaceId
+			)
+
+			local ok, body = pcall(function() return game:HttpGet(url) end)
+			if not ok or type(body) ~= "string" or body == "" then
+				isFetching = false
+				return
+			end
+
+			local ok2, decoded = pcall(function() return HttpService:JSONDecode(body) end)
+			if not ok2 or type(decoded) ~= "table" or type(decoded.data) ~= "table" then
+				isFetching = false
+				return
+			end
+
+			local list = {}
+			for _, s in ipairs(decoded.data) do
+				local id      = tostring(s.id or "")
+				local playing = tonumber(s.playing) or 0
+				local maxP    = tonumber(s.maxPlayers) or 0
+				local room    = maxP - playing
+				local isFull  = playing >= maxP
+
+				if id ~= "" and id ~= currentJobId then
+					if not EXCLUDE_FULL or not isFull then
+						table.insert(list, {
+							Id = id,
+							Playing = playing,
+							MaxP = maxP,
+							Room = room,
+							IsFull = isFull,
+						})
+					end
+				end
+			end
+
+			table.sort(list, function(a, b)
+				if a.Playing ~= b.Playing then return a.Playing < b.Playing end
+				return a.Room > b.Room
+			end)
+
+			serverList = list
+			isFetching = false
+		end
+
+		-- ═══ HOP ═══
+		local function hopTo(jobId)
+			if type(jobId) ~= "string" or jobId == "" then return end
+			print("[SRV] Hopping to:", jobId)
+			pcall(function()
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, LocalPlayer)
+			end)
+		end
+
+		-- ═══ RENDER ═══
+		local function computeHash(list)
+			local parts = {}
+			for _, s in ipairs(list) do
+				parts[#parts+1] = string.format("%s:%d", s.Id, s.Playing)
+			end
+			return table.concat(parts, "|")
+		end
+
+		local function clearButtons()
+			for _, entry in ipairs(serverButtons) do
+				destroyHandle(entry.Handle)
+			end
+			serverButtons = {}
+		end
+
+		local function render(force)
+			local list = serverList
+
+			-- ✅ Use current DISPLAY_COUNT (dynamic)
+			local shown = list
+			if #list > DISPLAY_COUNT then
+				shown = {}
+				for i = 1, DISPLAY_COUNT do shown[i] = list[i] end
+			end
+
+			-- ✅ Hash includes DISPLAY_COUNT para mag-trigger ng rebuild pag nag-change
+			local h = computeHash(shown) .. "|" .. tostring(#list) .. "|" .. tostring(DISPLAY_COUNT)
+			if not force and h == lastHash then return end
+			lastHash = h
+
+			clearButtons()
+
+			for i, s in ipairs(shown) do
+				local roomText, roomColor
+				if s.IsFull then
+					roomText = "FULL"
+					roomColor = COLOR_FULL
+				else
+					roomText = formatRoom(s.Room) .. " slots"
+					roomColor = COLOR_ROOM
+				end
+
+				local title = string.format(
+					'<font color="%s">👥 %d/%d</font>  <font color="%s">%s</font>  <font color="%s">%s</font>',
+					COLOR_PLAYERS, s.Playing, s.MaxP,
+					roomColor, roomText,
+					COLOR_ID, formatId(s.Id)
+				)
+
+				local jobId = s.Id
+
+				local btn = Tabs.ServerTab:Button({
+					Title = title,
+					Callback = function()
+						hopTo(jobId)
+					end,
+				})
+
+				if btn then
+					pcall(function()
+						if type(btn.Set) == "function" then
+							btn:Set({ RichText = true, Title = title })
+						end
+					end)
+					serverButtons[#serverButtons + 1] = { Handle = btn, Id = jobId }
+				end
+			end
+		end
+
+		-- ═══ TOGGLE ON ═══
+		if state then
+			stopSignal = false
+
+			-- Initial fetch
+			fetchServers()
+
+			-- Fetch thread (every FETCH_INTERVAL seconds)
+			fetchThread = task.spawn(function()
+				while not stopSignal do
+					pcall(fetchServers)
+
+					local elapsed = 0
+					while elapsed < FETCH_INTERVAL and not stopSignal do
+						task.wait(0.25)
+						elapsed = elapsed + 0.25
+					end
+				end
+			end)
+
+			-- Render thread (every RENDER_TICK seconds)
+			renderThread = task.spawn(function()
+				-- Initial render
+				task.wait(1.5)
+				pcall(render, true)
+
+				while not stopSignal do
+					-- ✅ Check kung may pending force refresh (from dropdown)
+					if forceRefresh then
+						forceRefresh = false
+						pcall(render, true)
+					else
+						pcall(render, false)
+					end
+
+					task.wait(RENDER_TICK)
+				end
+			end)
+
+		-- ═══ TOGGLE OFF ═══
+		else
+			stopSignal = true
+
+			if fetchThread then
+				pcall(task.cancel, fetchThread)
+				fetchThread = nil
+			end
+			if renderThread then
+				pcall(task.cancel, renderThread)
+				renderThread = nil
+			end
+
+			clearButtons()
+			serverList = {}
+			lastHash = ""
+
+			print("[SRV] Cleared")
+		end
+	end,
+})
+
+-- ═══ AUTO-START ═══
+task.spawn(function()
+	task.wait(0.3)
+	if toggleHandle and type(toggleHandle.Set) == "function" then
+		pcall(function() toggleHandle:Set(true) end)
+	end
+end)
 
 
