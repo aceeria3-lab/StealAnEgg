@@ -1957,7 +1957,7 @@ local Tabs = {
 if not Tabs.ServerTab then return end
 
 -- ═══ SHARED STATE (accessible sa both dropdown + toggle) ═══
-local DISPLAY_COUNT  = 10         -- default
+local DISPLAY_COUNT  = 1         -- default
 local forceRefresh   = false      -- para trigger re-render pag nag-change yung count
 
 -- ====================================================================
@@ -1967,7 +1967,7 @@ Tabs.ServerTab:Dropdown({
 	Title = "Servers to Show",
 	Desc  = "How many servers to display in the list",
 	Values = { "1", "5", "10" },
-	Value  = "10",                -- default
+	Value  = "1",                -- default
 	Multi  = false,
 	AllowNone = false,
 	Callback = function(selected)
