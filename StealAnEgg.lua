@@ -612,7 +612,9 @@ Value = false,
     end,
 })
 
-  
+
+
+
 -- ====================================================================
 local Tabs = {
 	EventTab = Window:Tab({
@@ -621,8 +623,11 @@ local Tabs = {
 	}),
 }
 
--- ====== AUTO RACE TOGGLE ======
-local isAutoRaceRunning = false -- Flag para ligtas na ma-stop
+
+
+
+-- ====== AUTO RACE TOGGLE (No filtergc, 100% Stable) ======
+local isAutoRaceRunning = false 
 
 Tabs.EventTab:Toggle({
     Title = "Auto Hollow Race",
@@ -633,7 +638,7 @@ Tabs.EventTab:Toggle({
 
         if isEnabled then
             -- ============================================================
-            -- 1. DEPENDENCIES (Kinukuha bawat toggle ON)
+            -- 1. DEPENDENCIES
             -- ============================================================
             local Players = game:GetService("Players")
             local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -650,7 +655,7 @@ Tabs.EventTab:Toggle({
             baseTopSpeed = (okBaseSpeed and type(baseTopSpeed) == "number") and baseTopSpeed or 135
 
             -- ============================================================
-            -- 2. HELPER FUNCTIONS (Nasa loob para hindi mag-clash)
+            -- 2. HELPER FUNCTIONS
             -- ============================================================
             local function getCharacterParts()
                 local char = LocalPlayer.Character
@@ -696,17 +701,7 @@ Tabs.EventTab:Toggle({
                 end
             end
 
-            local function findRaceMotor(rootPart)
-                if typeof(filtergc) ~= "function" or not rootPart then return nil end
-                local ok, tables = pcall(filtergc, "table", {Keys = {"LastJumpAt", "IgnoreGroundUntil", "TravelDirection"}}, false)
-                if not ok or type(tables) ~= "table" then return nil end
-                for _, table in tables do
-                    local rig = type(table) == "table" and rawget(table, "Rig")
-                    if type(rig) == "table" and rawget(rig, "Root") == rootPart then return table end
-                end
-            end
-
-            -- State table na local lang sa loob ng callback na ito
+            -- State table
             local State = {
                 speedMultiplier = 3.0,
                 moveVector = nil,
@@ -716,12 +711,11 @@ Tabs.EventTab:Toggle({
             }
 
             -- ============================================================
-            -- 3. MAIN LOOP (Task Spawn)
+            -- 3. MAIN RACE LOOP (Pure CFrame + Velocity)
             -- ============================================================
             task.spawn(function()
                 local currentTrack, trackPath, distanceTraveled, heightOffset, lastUpdateTime = nil, nil, nil, nil, nil
                 local lateralOffset, lastFramePosition, currentLap = 0, nil, 0
-                local raceMotor, nextMotorCheck = nil, 0
                 local lastLoggedMessage = nil
 
                 local function logOnce(msg) 
@@ -805,7 +799,7 @@ Tabs.EventTab:Toggle({
                             local newLap = math.floor(distanceTraveled / trackPath.Length) + 1
                             if newLap ~= currentLap then currentLap = newLap logOnce("Lap " .. currentLap) end
 
-                            -- DERETSO SA GITNA (No Boost Pads)
+                            -- DERETSO SA GITNA
                             lateralOffset = lateralOffset + math.clamp(0 - lateralOffset, -100 * dt, 100 * dt)
                             
                             if currentFrame and heightOffset then
@@ -814,32 +808,16 @@ Tabs.EventTab:Toggle({
 
                                 if not isStunned then
                                     lastFramePosition = targetPos
+                                    -- Puro CFrame at Velocity na lang, walang motor
                                     rootPart.CFrame = CFrame.lookAt(targetPos, targetPos + currentFrame.LookVector, currentFrame.UpVector)
                                     rootPart.AssemblyLinearVelocity = currentFrame.LookVector * targetSpeed
                                     rootPart.AssemblyAngularVelocity = Vector3.zero
                                 end
                             end
 
-                            if not isStunned and raceMotor and rawget(rawget(raceMotor, "Rig") or {}, "Root") == rootPart then
-                                local motorUp = rawget(raceMotor, "Up")
-                                local trackDir = typeof(motorUp) == "Vector3" and currentFrame.LookVector - motorUp * currentFrame.LookVector:Dot(motorUp) or currentFrame.LookVector
-                                if trackDir.Magnitude > 0.1 then
-                                    rawset(raceMotor, "Heading", trackDir.Unit)
-                                    rawset(raceMotor, "TravelDirection", trackDir.Unit)
-                                end
-                                rawset(raceMotor, "Speed", targetSpeed)
-                            end
-
                             if not State.racingActive then 
                                 State.racingActive = true 
                                 setMoveOverride(true) 
-                            end
-
-                            if os.clock() >= nextMotorCheck then
-                                nextMotorCheck = os.clock() + 1
-                                if not raceMotor or rawget(rawget(raceMotor, "Rig") or {}, "Root") ~= rootPart then 
-                                    raceMotor = findRaceMotor(rootPart) 
-                                end
                             end
                         end
                     else
@@ -872,9 +850,10 @@ Tabs.EventTab:Toggle({
             -- ============================================================
             print("[AutoRace] Stopped by user.")
             
-            -- Ibalik ang normal na galaw
             local Players = game:GetService("Players")
             local LocalPlayer = Players.LocalPlayer
+            
+            -- Ibalik ang normal na galaw
             local ok, controls = pcall(function() return require(LocalPlayer.PlayerScripts.PlayerModule):GetControls() end)
             if ok and controls then controls.GetMoveVector = nil end
             
@@ -882,23 +861,11 @@ Tabs.EventTab:Toggle({
             local char = LocalPlayer.Character
             local anim = char and char:FindFirstChild("Animate")
             if anim and anim:IsA("LocalScript") then anim.Enabled = true end
-            
-            -- Ibalik ang motor speed sa normal kung kaya
-            if typeof(filtergc) == "function" then
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                local okT, tables = pcall(filtergc, "table", {Keys = {"LastJumpAt", "IgnoreGroundUntil", "TravelDirection"}}, false)
-                if okT and type(tables) == "table" then
-                    for _, tbl in tables do
-                        local rig = type(tbl) == "table" and rawget(tbl, "Rig")
-                        if type(rig) == "table" and rawget(rig, "Root") == root then
-                            rawset(tbl, "Speed", 0) -- Reset sa 0 para di mag-glide
-                        end
-                    end
-                end
-            end
         end
     end
-})
+}) 
+
+
 
 
 
