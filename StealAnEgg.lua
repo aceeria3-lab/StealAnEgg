@@ -1,4 +1,4 @@
--- version 10
+-- version 11
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -2298,7 +2298,7 @@ end)
 
 
  	
-	 -- ====================================================================
+-- ====================================================================
 -- WINDUI TABS SETUP
 -- ====================================================================
 local Tabs = {
@@ -2310,12 +2310,13 @@ local Tabs = {
 
 if not Tabs.ChatTab then return end
 
---[[ GLOBAL CHAT SCRIPT (NEW LAYOUT & GRADIENTS) ]]
-local P=game:GetService("Players")
-local H=game:GetService("HttpService")
-local TS=game:GetService("TweenService")
-local MarketplaceService=game:GetService("MarketplaceService")
-local L=P.LocalPlayer
+--[[ GLOBAL CHAT SCRIPT (PROFILE POPUP) ]]
+local P = game:GetService("Players")
+local H = game:GetService("HttpService")
+local TS = game:GetService("TweenService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local TeleportService = game:GetService("TeleportService")
+local L = P.LocalPlayer
 
 local GameName = "Unknown Game"
 task.spawn(function()
@@ -2323,7 +2324,7 @@ task.spawn(function()
 	if ok and info and info.Name then GameName = info.Name end
 end)
 
-local I={ 	
+local I = { 	
 	info="rbxassetid://124560466474914", 	
 	reply="rbxassetid://109788633497028", 	
 	send="rbxassetid://127751956873796", 	
@@ -2335,7 +2336,7 @@ local I={
 	user="rbxassetid://81589895647169", 
 }
 
-local C={ 	
+local C = { 	
 	DB="https://global-chat-bb7ef-default-rtdb.asia-southeast1.firebasedatabase.app", 	
 	Poll=1.5, 	
 	Max=180, 	
@@ -2344,10 +2345,11 @@ local C={
 	PresTTL=20, 
 }
 
-local S={ 	
-	Main=nil,Input=nil,List=nil,Status=nil,ReplyBar=nil,ReplyLabel=nil, 	
-	Msgs={},Seen={},LastCount=0,LastSend=0,Order=0, 	
-	Alive=false,Mode="global",PrivTarget=nil,Online={},DMList={},ReplyTo=nil, 
+local S = { 	
+	Main=nil, Input=nil, List=nil, Status=nil, ReplyBar=nil, ReplyLabel=nil, 	
+	Msgs={}, Seen={}, LastCount=0, LastSend=0, Order=0, 	
+	Alive=false, Mode="global", PrivTarget=nil, Online={}, DMList={}, ReplyTo=nil,
+	OnlineCount = 1
 }
 
 local function Req() 	
@@ -2363,7 +2365,7 @@ local function Req()
 	return nil 
 end 
 
-local RQ=Req() 
+local RQ = Req() 
 
 local function Http(o) 	
 	if not RQ then return nil, "no request" end 	
@@ -2388,13 +2390,6 @@ local function Dec(v)
 end 
 
 local function Url(v) return H:UrlEncode(tostring(v)) end 
-
-local function Clip(t) 	
-	local s=tostring(t or "") 	
-	if setclipboard then pcall(setclipboard,s) 	
-	elseif toclipboard then pcall(toclipboard,s) 	
-	elseif type(syn)=="table" and syn.write_clipboard then pcall(syn.write_clipboard,s) end 
-end 
 
 local function Tw(o,t,p) 	
 	return TS:Create(o,TweenInfo.new(t or 0.12,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),p) 
@@ -2461,7 +2456,6 @@ function S:_ico(name,size,col)
 	return img 
 end 
 
--- ⚠️ UPDATE SA NOTICE PARA BUMALIK SA "ACTIVE NOW" IMBES NA CONNECTED
 function S:_notice(t,c) 	
 	if not self.Status then return end 	
 	self.Status.Text=t 	
@@ -2470,10 +2464,8 @@ function S:_notice(t,c)
 	self._ns=s 	
 	task.delay(2,function() 		
 		if self.Alive and self._ns==s and self.Status then 			
-			local onlineCount = 1 -- Bilang ka mismo
-			for _ in pairs(self.Online) do onlineCount = onlineCount + 1 end
-			self.Status.Text="● Active Now ("..onlineCount..")" 			
-			self.Status.TextColor3=Color3.fromRGB(87,242,135) 		
+			self.Status.Text="● Active Now ("..(self.OnlineCount or 1)..")" 			
+			self.Status.TextColor3=Color3.new(1,1,1) 		
 		end 	
 	end) 
 end 
@@ -2513,6 +2505,8 @@ function S:NewMessage(d)
 	local raw=tostring(d.Text or d.text or d.msg or "") 	
 	local ts=tonumber(d.timestamp or d.time or 0) or 0 	
 	local gName=tostring(d.gameName or d.GameName or "Unknown Game")
+	local msgPlaceId=d.PlaceId or d.placeId
+	local msgJobId=d.JobId or d.jobId
 	
 	if #raw>C.Max then raw=raw:sub(1,C.Max).."…" end 	
 	
@@ -2573,13 +2567,13 @@ function S:NewMessage(d)
 	end 	
 	
 	lo=lo+1
-	-- Main Container (Horizontal: Icon + Content)
 	local mainContainer = self:_o({"Frame",{Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=lo}},row)
 	self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,8),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Top}},mainContainer)
 
 	-- PLAYER ICON
-	local av=self:_o({"ImageLabel",{ 		
-		Size=UDim2.fromOffset(36,36),BackgroundColor3=Color3.fromRGB(47,49,54),BorderSizePixel=0,Image="",LayoutOrder=1 	
+	local av = self:_o({"ImageButton",{ 		
+		Size=UDim2.fromOffset(36,36),BackgroundColor3=Color3.fromRGB(47,49,54),BorderSizePixel=0,Image="",LayoutOrder=1,
+        AutoButtonColor=false
 	}},mainContainer) 	
 	self:_o({"UICorner",{CornerRadius=UDim.new(1,0)}},av) 	
 	if uid>0 then 		
@@ -2589,31 +2583,68 @@ function S:NewMessage(d)
 		end) 	
 	end
 
-	-- CONTENT COLUMN (Header + Message)
+    -- ⚠️ BAGONG PROFILE POPUP (Join Only)
+    local function OpenProfilePopup()
+        local placeIdText = msgPlaceId and tostring(msgPlaceId) or "Not Available"
+        local jobIdText = msgJobId and tostring(msgJobId) or "Not Available"
+        
+        -- Format the text para magmukhang profile card
+        local profileContent = string.format(
+            "Name: @%s\nGame: %s\nPlace ID: %s\nJob ID: %s",
+            un, gName, placeIdText, jobIdText
+        )
+
+        local dialog = Window:Dialog({
+            Title = "Player Profile",
+            Content = profileContent,
+            Icon = "user",
+            Buttons = {
+                {
+                    Title = "Join Game",
+                    Icon = "log-in",
+                    Variant = "Primary",
+                    Callback = function()
+                        if msgPlaceId and msgJobId and jobIdText ~= "Not Available" then
+                            local success, err = pcall(function()
+                                TeleportService:TeleportToPlaceInstance(tonumber(msgPlaceId), tostring(msgJobId), L)
+                            end)
+                            if not success then
+                                Window:Notify({Title = "Teleport Failed", Content = "Executor blocked the teleport or an error occurred.", Icon = "alert-triangle"})
+                            end
+                        else
+                            Window:Notify({Title = "Cannot Join", Content = "This message is old and doesn't have a Job ID.", Icon = "alert-triangle"})
+                        end
+                    end
+                }
+            }
+        })
+    end
+
+    -- Click listener sa avatar
+    av.MouseButton1Click:Connect(OpenProfilePopup)
+
+	-- CONTENT COLUMN
 	local contentColumn = self:_o({"Frame",{Size=UDim2.new(1,-44,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=2}},mainContainer)
 	self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Vertical,Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder}},contentColumn)
 
-	-- HEADER ROW (Username | GameName) - ⚠️ PINALAKI NATIN ITO
+	-- HEADER ROW
 	local headerRow = self:_o({"Frame",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,LayoutOrder=1}},contentColumn)
-	
-	-- Left Header (Username & Game)
 	local leftHeader = self:_o({"Frame",{Size=UDim2.new(1,-50,1,0),BackgroundTransparency=1}},headerRow)
 	self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center}},leftHeader)
 
-	-- Username Gradient - ⚠️ PINALAKI NATIN ANG TEXT SIZE
+	-- Username Gradient
 	local userLabel = self:_o({"TextButton",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="@"..un,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=13,AutoButtonColor=false,LayoutOrder=1}},leftHeader)
 	local uGrad = Instance.new("UIGradient")
 	uGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 120, 150)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 200, 100))} 
 	uGrad.Parent = userLabel
-	userLabel.MouseButton1Click:Connect(function() 		
-		Clip("@"..un) 		
-		self:_notice("Copied @"..un,Color3.fromRGB(87,242,135)) 	
-	end)
+	
+    -- Click listener sa username
+    userLabel.MouseButton1Click:Connect(OpenProfilePopup)
 
 	-- Divider
 	self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="|",TextColor3=Color3.fromRGB(150,150,150),Font=Enum.Font.Gotham,TextSize=13,LayoutOrder=2}},leftHeader)
 
-	-- Game Name Gradient - ⚠️ PINALAKI NATIN ANG TEXT SIZE
+	-- Game Name Gradient
 	local gameLabel = self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=gName,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=13,LayoutOrder=3,TextTruncate=Enum.TextTruncate.AtEnd}},leftHeader)
 	local gGrad = Instance.new("UIGradient")
 	gGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 255, 150)), ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 200, 255))} 
@@ -2632,14 +2663,12 @@ function S:NewMessage(d)
 	-- Time
 	self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=RelTime(ts),TextColor3=Color3.fromRGB(120,125,135),Font=Enum.Font.Gotham,TextSize=10,LayoutOrder=2}},rightHeader)
 
-	-- MESSAGE TEXT - ⚠️ BINOLD AT NILAGYAN NG STROKE
+	-- MESSAGE TEXT (BOLD + STROKE)
 	local txt=self:_o({"TextLabel",{ 		
 		Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1, 		
-		Text=raw,TextColor3=Color3.fromRGB(235,235,235),Font=Enum.Font.GothamBold,TextSize=14, -- Binold at pinalaki
+		Text=raw,TextColor3=Color3.fromRGB(235,235,235),Font=Enum.Font.GothamBold,TextSize=14,
 		TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Top,LayoutOrder=2 	
 	}},contentColumn) 	
-	
-	-- Chat Stroke
 	local chatStroke = Instance.new("UIStroke")
 	chatStroke.Color = Color3.fromRGB(0, 0, 0)
 	chatStroke.Thickness = 1.2
@@ -2737,7 +2766,9 @@ function S:Send(text)
 		UserId=L.UserId, 		
 		time=os.time(), 		
 		timestamp=os.time(),
-		gameName=GameName
+		gameName=GameName,
+		JobId=game.JobId,     
+		PlaceId=game.PlaceId  
 	} 	
 	if self.ReplyTo then 		
 		body.replyUser=fmtName(self.ReplyTo.DisplayName,self.ReplyTo.Username) 		
@@ -2798,22 +2829,23 @@ function S:_cleanIfAlone()
 	if type(d)~="table" then return false end 	
 	local now,any=os.time(),false 	
 	self.Online={} 	
-	local onlineCount = 1 -- Bilang agad sa sarili
+	local onlineCount = 1 
 	
 	for uid,v in pairs(d) do 		
 		if type(v)=="table" and tonumber(v.t) and (now-tonumber(v.t))<=C.PresTTL then 			
 			any=true 			
 			if tostring(uid)~=tostring(L.UserId) then 				
 				self.Online[tostring(uid)]={n=tostring(v.n or "?"),d=tostring(v.d or v.n or "?"),t=v.t} 			
-				onlineCount = onlineCount + 1 -- Dagdag sa bilang
+				onlineCount = onlineCount + 1 
 			end 		
 		end 	
 	end 	
 	
-	-- ⚠️ AUTO UPDATE NG STATUS KAPAG MAY PUMASOK/UMALIS
+	self.OnlineCount = onlineCount 
+	
 	if self.Status then
 		self.Status.Text = "● Active Now ("..onlineCount..")"
-		self.Status.TextColor3 = Color3.fromRGB(87,242,135)
+		self.Status.TextColor3 = Color3.new(1,1,1)
 	end
 	
 	if not any then 		
@@ -2877,15 +2909,20 @@ function S:Init()
 		BackgroundColor3=Color3.fromRGB(40,42,48),BorderSizePixel=0 	
 	}},main) 	
 	self:_o({"Frame",{Position=UDim2.new(0,0,1,-6),Size=UDim2.new(1,0,0,6),BackgroundColor3=Color3.fromRGB(40,42,48),BorderSizePixel=0}},top) 	
-	self:_o({"TextLabel",{ 		
-		Position=UDim2.fromOffset(10,4),Size=UDim2.new(1,-140,0,16),BackgroundTransparency=1, 		
-		Text="Global Chat",TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=13,TextXAlignment=Enum.TextXAlignment.Left 	
-	}},top) 	
+	
+	-- ACTIVE NOW LABEL (Gradient, Malaki)
 	local state=self:_o({"TextLabel",{ 		
-		Position=UDim2.fromOffset(10,20),Size=UDim2.new(1,-140,0,14),BackgroundTransparency=1, 		
-		Text="● Connecting...",TextColor3=Color3.fromRGB(150,155,165),Font=Enum.Font.Gotham,TextSize=9,TextXAlignment=Enum.TextXAlignment.Left 	
+		Position=UDim2.fromOffset(12,10),Size=UDim2.new(1,-24,0,20),BackgroundTransparency=1, 		
+		Text="● Active Now (1)",TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=16,TextXAlignment=Enum.TextXAlignment.Left 	
 	}},top) 	
-	self.Status=state 	
+	local statusGrad = Instance.new("UIGradient")
+	statusGrad.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 200)),   
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(100, 150, 255)), 
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 100, 255))  
+	}
+	statusGrad.Parent = state
+	self.Status = state
 	
 	local list=self:_o({"ScrollingFrame",{ 		
 		Position=UDim2.new(0,4,0,44),Size=UDim2.new(1,-8,1,-112), 		
@@ -2956,7 +2993,7 @@ function S:Init()
 			tick=tick+1 			
 			if tick%3==0 then 				
 				self:_presence() 				
-				self:_cleanIfAlone() -- Dito nag-a-update yung Active Now count
+				self:_cleanIfAlone() 			
 			end 			
 			pcall(function() self:_loadChat(false) end) 			
 			task.wait(C.Poll) 		
@@ -2965,12 +3002,28 @@ function S:Init()
 	return self 
 end 
 
--- ═══ AUTO START ═══
+-- SERVER FULL HANDLER
+TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage, placeId, teleportOptions)
+    if player == L then
+        if teleportResult == Enum.TeleportResult.GameFull then
+            Window:Notify({
+                Title = "Server Is Full",
+                Content = "Cannot join the server. Please try again later.",
+                Icon = "alert-triangle",
+                Duration = 5
+            })
+        elseif teleportResult == Enum.TeleportResult.Fail then
+            Window:Notify({
+                Title = "Teleport Failed",
+                Content = tostring(errorMessage),
+                Icon = "x-circle"
+            })
+        end
+    end
+end)
+
+-- AUTO START
 task.spawn(function()
 	task.wait(0.5)
 	S:Init()
 end) 
-	
-	
-
-
