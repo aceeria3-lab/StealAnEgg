@@ -1,4 +1,4 @@
--- version 8
+-- version 10
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -2294,7 +2294,11 @@ task.spawn(function()
 	end
 end)
 
--- ====================================================================
+
+
+
+ 	
+	 -- ====================================================================
 -- WINDUI TABS SETUP
 -- ====================================================================
 local Tabs = {
@@ -2457,6 +2461,7 @@ function S:_ico(name,size,col)
 	return img 
 end 
 
+-- ⚠️ UPDATE SA NOTICE PARA BUMALIK SA "ACTIVE NOW" IMBES NA CONNECTED
 function S:_notice(t,c) 	
 	if not self.Status then return end 	
 	self.Status.Text=t 	
@@ -2465,7 +2470,9 @@ function S:_notice(t,c)
 	self._ns=s 	
 	task.delay(2,function() 		
 		if self.Alive and self._ns==s and self.Status then 			
-			self.Status.Text="● Connected" 			
+			local onlineCount = 1 -- Bilang ka mismo
+			for _ in pairs(self.Online) do onlineCount = onlineCount + 1 end
+			self.Status.Text="● Active Now ("..onlineCount..")" 			
 			self.Status.TextColor3=Color3.fromRGB(87,242,135) 		
 		end 	
 	end) 
@@ -2586,17 +2593,17 @@ function S:NewMessage(d)
 	local contentColumn = self:_o({"Frame",{Size=UDim2.new(1,-44,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=2}},mainContainer)
 	self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Vertical,Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder}},contentColumn)
 
-	-- HEADER ROW (Username | GameName)
-	local headerRow = self:_o({"Frame",{Size=UDim2.new(1,0,0,18),BackgroundTransparency=1,LayoutOrder=1}},contentColumn)
+	-- HEADER ROW (Username | GameName) - ⚠️ PINALAKI NATIN ITO
+	local headerRow = self:_o({"Frame",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,LayoutOrder=1}},contentColumn)
 	
 	-- Left Header (Username & Game)
 	local leftHeader = self:_o({"Frame",{Size=UDim2.new(1,-50,1,0),BackgroundTransparency=1}},headerRow)
 	self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center}},leftHeader)
 
-	-- Username Gradient
-	local userLabel = self:_o({"TextButton",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="@"..un,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=11,AutoButtonColor=false,LayoutOrder=1}},leftHeader)
+	-- Username Gradient - ⚠️ PINALAKI NATIN ANG TEXT SIZE
+	local userLabel = self:_o({"TextButton",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="@"..un,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=13,AutoButtonColor=false,LayoutOrder=1}},leftHeader)
 	local uGrad = Instance.new("UIGradient")
-	uGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 120, 150)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 200, 100))} -- Pink to Orange
+	uGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 120, 150)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 200, 100))} 
 	uGrad.Parent = userLabel
 	userLabel.MouseButton1Click:Connect(function() 		
 		Clip("@"..un) 		
@@ -2604,16 +2611,16 @@ function S:NewMessage(d)
 	end)
 
 	-- Divider
-	self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="|",TextColor3=Color3.fromRGB(150,150,150),Font=Enum.Font.Gotham,TextSize=11,LayoutOrder=2}},leftHeader)
+	self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="|",TextColor3=Color3.fromRGB(150,150,150),Font=Enum.Font.Gotham,TextSize=13,LayoutOrder=2}},leftHeader)
 
-	-- Game Name Gradient
-	local gameLabel = self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=gName,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=11,LayoutOrder=3,TextTruncate=Enum.TextTruncate.AtEnd}},leftHeader)
+	-- Game Name Gradient - ⚠️ PINALAKI NATIN ANG TEXT SIZE
+	local gameLabel = self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=gName,TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=13,LayoutOrder=3,TextTruncate=Enum.TextTruncate.AtEnd}},leftHeader)
 	local gGrad = Instance.new("UIGradient")
-	gGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 255, 150)), ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 200, 255))} -- Green to Cyan
+	gGrad.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 255, 150)), ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 200, 255))} 
 	gGrad.Parent = gameLabel
 
 	-- Right Header (Time & Reply)
-	local rightHeader = self:_o({"Frame",{AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,0,0,0),Size=UDim2.fromOffset(50,18),BackgroundTransparency=1}},headerRow)
+	local rightHeader = self:_o({"Frame",{AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,0,0,0),Size=UDim2.fromOffset(50,22),BackgroundTransparency=1}},headerRow)
 	self:_o({"UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,4),HorizontalAlignment=Enum.HorizontalAlignment.Right,VerticalAlignment=Enum.VerticalAlignment.Center}},rightHeader)
 
 	-- Reply Button
@@ -2623,14 +2630,21 @@ function S:NewMessage(d)
 	replyBtn.MouseLeave:Connect(function() replyBtn.ImageColor3=Color3.fromRGB(130,135,145) end)
 
 	-- Time
-	self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=RelTime(ts),TextColor3=Color3.fromRGB(120,125,135),Font=Enum.Font.Gotham,TextSize=9,LayoutOrder=2}},rightHeader)
+	self:_o({"TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=RelTime(ts),TextColor3=Color3.fromRGB(120,125,135),Font=Enum.Font.Gotham,TextSize=10,LayoutOrder=2}},rightHeader)
 
-	-- MESSAGE TEXT
+	-- MESSAGE TEXT - ⚠️ BINOLD AT NILAGYAN NG STROKE
 	local txt=self:_o({"TextLabel",{ 		
 		Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1, 		
-		Text=raw,TextColor3=Color3.fromRGB(220,221,222),Font=Enum.Font.Gotham,TextSize=12, 		
+		Text=raw,TextColor3=Color3.fromRGB(235,235,235),Font=Enum.Font.GothamBold,TextSize=14, -- Binold at pinalaki
 		TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Top,LayoutOrder=2 	
 	}},contentColumn) 	
+	
+	-- Chat Stroke
+	local chatStroke = Instance.new("UIStroke")
+	chatStroke.Color = Color3.fromRGB(0, 0, 0)
+	chatStroke.Thickness = 1.2
+	chatStroke.Transparency = 0.3
+	chatStroke.Parent = txt
 	
 	self.Msgs[#self.Msgs+1]=wrap 	
 	while #self.Msgs>C.History+8 do 		
@@ -2751,7 +2765,6 @@ function S:Send(text)
 		})) 		
 		ok=res~=nil 	
 	end 	
-	
 	if not ok then 		
 		self:_notice("Send failed",Color3.fromRGB(237,66,69)) 		
 		return false 	
@@ -2785,14 +2798,24 @@ function S:_cleanIfAlone()
 	if type(d)~="table" then return false end 	
 	local now,any=os.time(),false 	
 	self.Online={} 	
+	local onlineCount = 1 -- Bilang agad sa sarili
+	
 	for uid,v in pairs(d) do 		
 		if type(v)=="table" and tonumber(v.t) and (now-tonumber(v.t))<=C.PresTTL then 			
 			any=true 			
 			if tostring(uid)~=tostring(L.UserId) then 				
 				self.Online[tostring(uid)]={n=tostring(v.n or "?"),d=tostring(v.d or v.n or "?"),t=v.t} 			
+				onlineCount = onlineCount + 1 -- Dagdag sa bilang
 			end 		
 		end 	
 	end 	
+	
+	-- ⚠️ AUTO UPDATE NG STATUS KAPAG MAY PUMASOK/UMALIS
+	if self.Status then
+		self.Status.Text = "● Active Now ("..onlineCount..")"
+		self.Status.TextColor3 = Color3.fromRGB(87,242,135)
+	end
+	
 	if not any then 		
 		pcall(function() Http({Url=self:_base().."/public_chat.json",Method="DELETE"}) end) 		
 		self:Clear() 		
@@ -2919,7 +2942,6 @@ function S:Init()
 	self:_o({"UICorner",{CornerRadius=UDim.new(0,6)}},send) 	
 	AddBorder(send,Color3.fromRGB(0,0,0),Color3.fromRGB(120,140,255),1,1.4) 	
 	BindBorder(send,1.4,2.2,2.8) 	
-	
 	send.MouseButton1Click:Connect(function() self:Send() end) 	
 	input.FocusLost:Connect(function(e) if e then self:Send() end end) 	
 	input.MouseEnter:Connect(function() self:_bottom() end)
@@ -2934,7 +2956,7 @@ function S:Init()
 			tick=tick+1 			
 			if tick%3==0 then 				
 				self:_presence() 				
-				self:_cleanIfAlone() 			
+				self:_cleanIfAlone() -- Dito nag-a-update yung Active Now count
 			end 			
 			pcall(function() self:_loadChat(false) end) 			
 			task.wait(C.Poll) 		
@@ -2948,5 +2970,7 @@ task.spawn(function()
 	task.wait(0.5)
 	S:Init()
 end) 
+	
+	
 
 
