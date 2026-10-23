@@ -1,4 +1,4 @@
--- version 11
+-- version 12
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
@@ -2310,7 +2310,7 @@ local Tabs = {
 
 if not Tabs.ChatTab then return end
 
---[[ GLOBAL CHAT SCRIPT (PROFILE POPUP) ]]
+--[[ GLOBAL CHAT SCRIPT (PROFILE POPUP WITH CLOSE) ]]
 local P = game:GetService("Players")
 local H = game:GetService("HttpService")
 local TS = game:GetService("TweenService")
@@ -2583,18 +2583,19 @@ function S:NewMessage(d)
 		end) 	
 	end
 
-    -- ⚠️ BAGONG PROFILE POPUP (Join Only)
+    -- ⚠️ PROFILE POPUP (MAY CLOSE BUTTON NA)
     local function OpenProfilePopup()
         local placeIdText = msgPlaceId and tostring(msgPlaceId) or "Not Available"
         local jobIdText = msgJobId and tostring(msgJobId) or "Not Available"
         
-        -- Format the text para magmukhang profile card
         local profileContent = string.format(
             "Name: @%s\nGame: %s\nPlace ID: %s\nJob ID: %s",
             un, gName, placeIdText, jobIdText
         )
 
-        local dialog = Window:Dialog({
+        local dialog -- Declare muna natin para magamit sa loob ng Callback
+        
+        dialog = Window:Dialog({
             Title = "Player Profile",
             Content = profileContent,
             Icon = "user",
@@ -2609,11 +2610,26 @@ function S:NewMessage(d)
                                 TeleportService:TeleportToPlaceInstance(tonumber(msgPlaceId), tostring(msgJobId), L)
                             end)
                             if not success then
-                                Window:Notify({Title = "Teleport Failed", Content = "Executor blocked the teleport or an error occurred.", Icon = "alert-triangle"})
+                                Window:Notify({Title = "Teleport Failed", Content = "Executor blocked the teleport.", Icon = "alert-triangle"})
+                            end
+                        elseif msgPlaceId then
+                            local success, err = pcall(function()
+                                TeleportService:Teleport(tonumber(msgPlaceId), L)
+                            end)
+                            if not success then
+                                Window:Notify({Title = "Teleport Failed", Content = "Could not join the game.", Icon = "alert-triangle"})
                             end
                         else
-                            Window:Notify({Title = "Cannot Join", Content = "This message is old and doesn't have a Job ID.", Icon = "alert-triangle"})
+                            Window:Notify({Title = "Cannot Join", Content = "This message is old.", Icon = "alert-triangle"})
                         end
+                    end
+                },
+                {
+                    Title = "Close",
+                    Icon = "x",
+                    Variant = "Secondary", -- Kulay gray/puti para pang-close
+                    Callback = function()
+                        dialog:Close() -- Ito yung magsasara sa popup
                     end
                 }
             }
