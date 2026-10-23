@@ -1,4 +1,4 @@
--- version 6
+-- version 7
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
